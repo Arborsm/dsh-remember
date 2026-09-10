@@ -23,4 +23,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm typecheck
+        # transfer tests commit into a temp git repo; runners have no identity
+      - run: |
+          git config --global user.email ci@example.com
+          git config --global user.name ci
       - run: pnpm test
