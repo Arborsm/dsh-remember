@@ -1,5 +1,8 @@
 # dsh-memory-plugin
 
+[![ci](https://github.com/Arborsm/dsh-memory-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Arborsm/dsh-memory-plugin/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 [中文](README.zh-CN.md)
 
 Cross-session long-term memory for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)(dsh).

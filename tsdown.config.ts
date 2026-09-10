@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, type UserConfig } from 'tsdown'
 
@@ -5,11 +6,23 @@ import { defineConfig, type UserConfig } from 'tsdown'
 // lib/index.js so the built file is self-contained — it loads via
 // `pnpm dsh web --patch` (dev) and `dsh plugin add` (bundle) without any
 // node_modules of its own. Dependencies resolve against a built
-// deepseek-harness checkout.
+// deepseek-harness checkout when one is present (DSH_CHECKOUT); otherwise
+// (CI) schemastery resolves from node_modules and dsh-tools is stubbed
+// (its npm rc pulls unpublished peer deps).
 const dsh = process.env.DSH_CHECKOUT ?? 'E:/Arbor/deepseek-harness'
 
 const vendor = (name: string) => path.posix.join(dsh, 'vendor', name, 'lib')
 const pkg = (group: string, name: string) => path.posix.join(dsh, 'packages', group, name, 'lib')
+
+const alias: Record<string, string> = fs.existsSync(vendor('cordis'))
+  ? {
+      '@deepseek-ai/cordis': `${vendor('cordis')}/index.js`,
+      '@deepseek-ai/schemastery': `${vendor('schemastery')}/index.mjs`,
+      '@deepseek-ai/dsh-tools': `${pkg('core', 'tools')}/index.js`,
+    }
+  : {
+      '@deepseek-ai/dsh-tools': path.resolve('tests/stubs/dsh-tools.mjs'),
+    }
 
 const host: UserConfig = {
   entry: ['src/index.ts'],
@@ -19,11 +32,7 @@ const host: UserConfig = {
   target: 'node22',
   dts: false,
   loader: { '.md': 'text' },
-  alias: {
-    '@deepseek-ai/cordis': `${vendor('cordis')}/index.js`,
-    '@deepseek-ai/schemastery': `${vendor('schemastery')}/index.mjs`,
-    '@deepseek-ai/dsh-tools': `${pkg('core', 'tools')}/index.js`,
-  },
+  alias,
   external: [/^node:/],
 }
 

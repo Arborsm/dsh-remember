@@ -49,6 +49,7 @@
     "shots": "node --import ./tests/register-hooks.mjs tools/shots.mjs"
   },
   "devDependencies": {
+    "@deepseek-ai/schemastery": "3.18.2",
     "@types/node": "^24.10.1",
     "tsdown": "^0.15.0",
     "typescript": "^5.9.0"
