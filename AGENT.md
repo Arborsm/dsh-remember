@@ -48,6 +48,10 @@ node --import tsx/esm apps/cli/src/bin.ts web --patch <path/to>/cordis.dev.yml
 
 `register-hooks` reproduces two things tsdown does at build time: importing `.md` as text, and resolving `@deepseek-ai/*` to the built checkout (path from `DSH_CHECKOUT`). `--patch` must come before `--port`.
 
+## Release
+
+Bump `version` in package.json, push, then `gh release create vX.Y.Z`. The `publish.yml` workflow (npm trusted publisher, OIDC — no tokens) verifies and publishes on release.
+
 ## Conventions
 
 - **The two halves communicate only through settings namespaces.** `memory` (config), `memory-status` (phase & summary preview), `memory-commands` (`{action, path, arg, force, requestedAt}`), `memory-view` (viewer data). Third-party plugins can't get typert artifacts from `ctx.remote.*` — do not add RPC.
