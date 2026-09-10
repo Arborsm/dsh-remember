@@ -1,5 +1,5 @@
 {
-  "name": "dsh-memory-plugin",
+  "name": "@arborsm/dsh-memory-plugin",
   "version": "0.1.0",
   "description": "Cross-session long-term memory for the DeepSeek Harness: a two-phase extraction/consolidation pipeline over a file-based memory workspace, recall injection, a citation feedback loop, lease-based job semantics, plus a settings page, a sidebar status panel and a memory viewer.",
   "keywords": [
@@ -46,7 +46,8 @@
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
     "test": "node --import ./tests/register-hooks.mjs --test tests/*.test.mjs",
-    "shots": "node --import ./tests/register-hooks.mjs tools/shots.mjs"
+    "shots": "node --import ./tests/register-hooks.mjs tools/shots.mjs",
+    "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
     "@deepseek-ai/schemastery": "3.18.2",
@@ -54,5 +55,7 @@
     "tsdown": "^0.15.0",
     "typescript": "^5.9.0"
   },
-  "private": true
+  "publishConfig": {
+    "access": "public"
+  }
 }

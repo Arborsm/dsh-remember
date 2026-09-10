@@ -42,11 +42,19 @@
 
 ## 安装
 
-```sh
-pnpm install && pnpm build
+从 npm 安装:
 
-# 装到某个 profile
-dsh plugin --profile <name> add <path/to>/dsh-memory-plugin
+```sh
+dsh plugin --profile <name> add @arborsm/dsh-memory-plugin
+```
+
+从源码安装:
+
+```sh
+git clone https://github.com/Arborsm/dsh-memory-plugin.git
+cd dsh-memory-plugin
+pnpm install && pnpm build
+dsh plugin --profile <name> add .
 ```
 
 安装后重启 `dsh web`。开发期也可以不安装,直接从工作区加载(在 dsh checkout 根目录执行):

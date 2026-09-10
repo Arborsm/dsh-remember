@@ -1,5 +1,5 @@
-# Bundle layer: applied when a profile lists dsh-memory-plugin. Rows resolve
-# by package name so Node module resolution finds the installed code.
+# Bundle layer: applied when a profile lists @arborsm/dsh-memory-plugin. Rows
+# resolve by package name so Node module resolution finds the installed code.
 - insert:
     - id: dsh-memory
-      name: dsh-memory-plugin
+      name: '@arborsm/dsh-memory-plugin'

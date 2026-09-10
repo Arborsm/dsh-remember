@@ -42,11 +42,19 @@ The memory viewer: overview, summary, index, and records.
 
 ## Install
 
-```sh
-pnpm install && pnpm build
+From npm:
 
-# Install into a profile
-dsh plugin --profile <name> add <path/to>/dsh-memory-plugin
+```sh
+dsh plugin --profile <name> add @arborsm/dsh-memory-plugin
+```
+
+From source:
+
+```sh
+git clone https://github.com/Arborsm/dsh-memory-plugin.git
+cd dsh-memory-plugin
+pnpm install && pnpm build
+dsh plugin --profile <name> add .
 ```
 
 Restart `dsh web` after installing. During development you can skip installation and load straight from the workspace (run from the dsh checkout root):
