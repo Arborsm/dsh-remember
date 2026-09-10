@@ -1,6 +1,7 @@
 # dsh-memory-plugin
 
 [![ci](https://github.com/Arborsm/dsh-memory-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Arborsm/dsh-memory-plugin/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/dsh-remember)](https://www.npmjs.com/package/dsh-remember)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [中文](README.zh-CN.md)
@@ -45,7 +46,7 @@ The memory viewer: overview, summary, index, and records.
 From npm:
 
 ```sh
-dsh plugin --profile <name> add @arborsm/dsh-memory-plugin
+dsh plugin --profile <name> add dsh-remember
 ```
 
 From source:
