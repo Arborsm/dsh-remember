@@ -15,7 +15,7 @@ import { createElement, useEffect, useState } from 'react'
 import type { ScopeView } from './types.ts'
 
 export const MEMORY_VIEWER_KIND = 'dsh-memory'
-export const MEMORY_VIEWER_ID = 'dsh-memory-plugin/viewer'
+export const MEMORY_VIEWER_ID = 'dsh-remember/viewer'
 
 type ReactNode = ReturnType<typeof createElement> | string | null
 type SelectorHook = (selector: (value: unknown) => unknown) => unknown

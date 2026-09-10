@@ -15,10 +15,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Arborsm/dsh-memory-plugin.git"
+    "url": "git+https://github.com/Arborsm/dsh-remember.git"
   },
-  "homepage": "https://github.com/Arborsm/dsh-memory-plugin#readme",
-  "bugs": "https://github.com/Arborsm/dsh-memory-plugin/issues",
+  "homepage": "https://github.com/Arborsm/dsh-remember#readme",
+  "bugs": "https://github.com/Arborsm/dsh-remember/issues",
   "type": "module",
   "main": "lib/index.js",
   "exports": {

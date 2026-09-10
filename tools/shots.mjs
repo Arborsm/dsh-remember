@@ -85,7 +85,7 @@ const REGISTRY = `# Memory Registry
 ## E:\\Arbor\\dsh-memory
 
 ### 插件
-- [dsh-memory-plugin] 两阶段记忆系统；提取并发默认 1，整理作业带租约 · usage 12
+- [dsh-remember] 两阶段记忆系统；提取并发默认 1，整理作业带租约 · usage 12
 - [translation-memory] 按 ~1KB 分段做译文缓存，改一行只重翻一段 · usage 5
 `
 

@@ -12,7 +12,7 @@ import { installMemorySettings, installMemoryStatus, installMemoryView, type Sta
 import { buildExportBundle, importBundle, registerTransferTools, writeExportBundle } from './transfer.ts'
 import { publishMemoryView, translateMemory } from './view.ts'
 
-export const name = 'dsh-memory-plugin'
+export const name = 'dsh-remember'
 
 export const inject = [
   'tools',

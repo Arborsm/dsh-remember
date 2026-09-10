@@ -1,5 +1,5 @@
 /**
- * Browser half of dsh-memory-plugin: contributes the Settings → Plugins card
+ * Browser half of dsh-remember: contributes the Settings → Plugins card
  * for the `memory` namespace and the memory entry in the sidebar footer.
  * Registered lazily via slots.inject so composition order never matters.
  */
@@ -10,7 +10,7 @@ import { installCitationStripper } from './citation-stripper.ts'
 import { MEMORY_VIEWER_ID, MEMORY_VIEWER_KIND, MemoryViewerBody, MemoryViewerTitle } from './memory-viewer.ts'
 import type { CatalogModel, ClientContext } from './types.ts'
 
-export const name = 'dsh-memory-plugin'
+export const name = 'dsh-remember'
 
 /** Required browser services (cordis fiber inject). */
 export const inject = ['slots', 'locale', 'settingsScope', 'remote', 'remote.session']

@@ -40,7 +40,7 @@ const host: UserConfig = {
 // with the client module system (`window.__ModuleLoader__.load`). The module
 // table answers every bare import — only react here — everything else inlines.
 const client: UserConfig = {
-  name: 'dsh-memory-plugin/client',
+  name: 'dsh-remember/client',
   entry: { client: 'src/client/index.ts' },
   outDir: 'lib',
   format: 'cjs',
@@ -62,7 +62,7 @@ const client: UserConfig = {
   },
   outputOptions: {
     entryFileNames: 'client.js',
-    banner: 'window.__ModuleLoader__.load({ id: "dsh-memory-plugin", factory: (require) => {',
+    banner: 'window.__ModuleLoader__.load({ id: "dsh-remember", factory: (require) => {',
     footer: 'return module.exports; } });',
     intro: 'var module = { exports: {} }; var exports = module.exports;',
   },

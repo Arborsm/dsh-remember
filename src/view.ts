@@ -267,7 +267,7 @@ async function translateSegment(
       id: `dsh-memory-translate-${label}-${Date.now()}`,
       role: 'user',
       content: [{ type: 'text', text: segment }],
-      source: { kind: 'plugin', plugin: 'dsh-memory-plugin' },
+      source: { kind: 'plugin', plugin: 'dsh-remember' },
     }],
     maxTokens: TRANSLATE_MAX_TOKENS,
     reasoningEffort,

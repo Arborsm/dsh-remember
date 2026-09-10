@@ -183,7 +183,7 @@ export function renderRolloutSummaryFile(record: MemoryRecord): string {
     `- workspace_path: ${record.workspacePath}`,
     `- rollout_path: ${record.rolloutPath}`,
     `- updated_at: ${new Date(record.sourceUpdatedAt * 1000).toISOString()}`,
-    '- source: dsh-memory-plugin',
+    '- source: dsh-remember',
     '',
   ].join('\n')
   return `${header}${record.rolloutSummary.trim()}\n`

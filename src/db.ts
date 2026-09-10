@@ -663,7 +663,7 @@ function maxRetriesConstant(): number {
 }
 
 function workerId(): string {
-  return `dsh-memory-plugin-${process.pid}`
+  return `dsh-remember-${process.pid}`
 }
 
 type RowLike = Record<string, unknown>

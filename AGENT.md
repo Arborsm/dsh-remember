@@ -1,6 +1,6 @@
 # AGENT.md
 
-`dsh-memory-plugin` is a cross-session long-term memory plugin for dsh.
+`dsh-remember` is a cross-session long-term memory plugin for dsh.
 
 ## Repository layout
 

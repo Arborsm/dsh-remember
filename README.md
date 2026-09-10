@@ -1,6 +1,6 @@
-# dsh-memory-plugin
+# dsh-remember
 
-[![ci](https://github.com/Arborsm/dsh-memory-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/Arborsm/dsh-memory-plugin/actions/workflows/ci.yml)
+[![ci](https://github.com/Arborsm/dsh-remember/actions/workflows/ci.yml/badge.svg)](https://github.com/Arborsm/dsh-remember/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/dsh-remember)](https://www.npmjs.com/package/dsh-remember)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -52,8 +52,8 @@ dsh plugin --profile <name> add dsh-remember
 From source:
 
 ```sh
-git clone https://github.com/Arborsm/dsh-memory-plugin.git
-cd dsh-memory-plugin
+git clone https://github.com/Arborsm/dsh-remember.git
+cd dsh-remember
 pnpm install && pnpm build
 dsh plugin --profile <name> add .
 ```
@@ -61,7 +61,7 @@ dsh plugin --profile <name> add .
 Restart `dsh web` after installing. During development you can skip installation and load straight from the workspace (run from the dsh checkout root):
 
 ```sh
-pnpm dsh web --patch <path/to>/dsh-memory-plugin/cordis.dev.yml
+pnpm dsh web --patch <path/to>/dsh-remember/cordis.dev.yml
 ```
 
 Note: `--patch` must come before `--port`, otherwise commander fails with `unknown option '--patch'`.

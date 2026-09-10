@@ -1,8 +1,8 @@
 # Development overlay: load the built plugin straight from this workspace.
-#   pnpm dsh web --patch ./dsh-memory-plugin/cordis.dev.yml
+#   pnpm dsh web --patch ./dsh-remember/cordis.dev.yml
 # (run from the deepseek-harness checkout root; adjust the absolute path if the
 # workspace moves). All behavior knobs come from the plugin's Config schema
 # defaults; add a `config:` block here to override for local testing.
 - insert:
     - id: dsh-memory
-      name: 'E:/Arbor/dsh-memory/dsh-memory-plugin/lib/index.js'
+      name: 'E:/Arbor/dsh-memory/dsh-remember/lib/index.js'

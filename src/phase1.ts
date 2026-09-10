@@ -270,7 +270,7 @@ async function runExtraction(
       id: `dsh-memory-extract-${Date.now()}`,
       role: 'user',
       content: [{ type: 'text', text: user }],
-      source: { kind: 'plugin', plugin: 'dsh-memory-plugin' },
+      source: { kind: 'plugin', plugin: 'dsh-remember' },
     }],
     maxTokens: EXTRACTION_OUTPUT_TOKENS,
     signal: undefined,
