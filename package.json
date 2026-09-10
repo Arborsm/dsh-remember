@@ -1,0 +1,57 @@
+{
+  "name": "dsh-memory-plugin",
+  "version": "0.1.0",
+  "description": "Cross-session long-term memory for the DeepSeek Harness: a two-phase extraction/consolidation pipeline over a file-based memory workspace, recall injection, a citation feedback loop, lease-based job semantics, plus a settings page, a sidebar status panel and a memory viewer.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "memory",
+    "long-term-memory",
+    "agent-memory"
+  ],
+  "author": "Arborsm",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arborsm/dsh-memory-plugin.git"
+  },
+  "homepage": "https://github.com/Arborsm/dsh-memory-plugin#readme",
+  "bugs": "https://github.com/Arborsm/dsh-memory-plugin/issues",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "slots",
+        "locale",
+        "settingsScope"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import ./tests/register-hooks.mjs --test tests/*.test.mjs",
+    "shots": "node --import ./tests/register-hooks.mjs tools/shots.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "tsdown": "^0.15.0",
+    "typescript": "^5.9.0"
+  },
+  "private": true
+}
