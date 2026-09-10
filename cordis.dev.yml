@@ -5,4 +5,4 @@
 # defaults; add a `config:` block here to override for local testing.
 - insert:
     - id: dsh-memory
-      name: 'E:/Arbor/dsh-memory/dsh-remember/lib/index.js'
+      name: 'E:/Arbor/dsh-memory/dsh-memory-plugin/lib/index.js'
