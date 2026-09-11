@@ -29,7 +29,7 @@
   <img src="docs/shots/01-sidebar-panel.png" width="420" alt="侧栏入口与状态面板">
 </p>
 
-记忆浏览页:概览、摘要、注册表、记录。
+记忆浏览页:概览(统计、最常引用、记录)、摘要、注册表。
 
 <p align="center">
   <img src="docs/shots/02-viewer-overview.png" width="330" alt="概览">
@@ -38,7 +38,6 @@
 
 <p align="center">
   <img src="docs/shots/04-viewer-index.png" width="330" alt="注册表">
-  <img src="docs/shots/05-viewer-records.png" width="330" alt="记录">
 </p>
 
 ## 安装

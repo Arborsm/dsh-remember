@@ -29,7 +29,7 @@ The memory entry at the bottom of the sidebar opens the status panel.
   <img src="docs/shots/01-sidebar-panel.png" width="420" alt="Sidebar entry and status panel">
 </p>
 
-The memory viewer: overview, summary, index, and records.
+The memory viewer: overview (stats, most-cited, records), summary, and registry.
 
 <p align="center">
   <img src="docs/shots/02-viewer-overview.png" width="330" alt="Overview">
@@ -38,7 +38,6 @@ The memory viewer: overview, summary, index, and records.
 
 <p align="center">
   <img src="docs/shots/04-viewer-index.png" width="330" alt="Index">
-  <img src="docs/shots/05-viewer-records.png" width="330" alt="Records">
 </p>
 
 ## Install

@@ -1,7 +1,8 @@
 /**
  * The standalone memory viewer: a right-sidebar page tab (same public path as
- * ui-sidebar-files) with four views — overview dashboard, summary (original /
- * translated), the MEMORY.md registry, and the stage-1 records table.
+ * ui-sidebar-files) with three views — overview dashboard (stats, most-cited,
+ * and the searchable records table), summary (original / translated), and the
+ * MEMORY.md registry.
  *
  * Data arrives through the `memory-view` / `memory-status` settings mirrors:
  * a registration's `inject.hooks` compartment is synthesized by the slot
@@ -178,7 +179,7 @@ async function decodeBlobs(encoded: string): Promise<Texts> {
   }
 }
 
-type TabId = 'overview' | 'summary' | 'index' | 'records'
+type TabId = 'overview' | 'summary' | 'index'
 
 /** Viewer body (slot component). */
 export function MemoryViewerBody(props: ViewerProps) {
@@ -216,7 +217,7 @@ function renderViewer(props: ViewerProps) {
   return createElement('div', { className: 'dshmv-root' },
     // tabs first: the action row sits below them, not against the pane header
     createElement('div', { className: 'dshmv-tabs' },
-      ...(['overview', 'summary', 'index', 'records'] as const).map((id) => createElement('button', {
+      ...(['overview', 'summary', 'index'] as const).map((id) => createElement('button', {
         key: id,
         type: 'button',
         className: 'dshmv-tab',
@@ -292,21 +293,23 @@ function renderViewer(props: ViewerProps) {
       // Every tab fills the pane; its content block does the scrolling.
       'data-fill': 'true',
     },
-      tab === 'overview' ? renderOverview(t, texts, showTranslated, status, records)
+      tab === 'overview' ? createElement(OverviewView, { t, texts, showTranslated, status, records })
         : tab === 'summary' ? createElement(SummaryView, { t, texts, showTranslated })
-          : tab === 'index' ? renderIndex(t, texts, showTranslated)
-            : createElement(RecordsView, { t, records }),
+          : renderIndex(t, texts, showTranslated),
     ),
   )
 }
 
-function renderOverview(
-  t: (k: string) => string,
-  texts: Texts,
-  showTranslated: boolean,
-  status: Partial<StatusState>,
-  records: RecordStat[],
-): ReactNode {
+/** Overview dashboard: stat cards, status, most-cited, and the records table. */
+function OverviewView(props: {
+  t: (k: string) => string
+  texts: Texts
+  showTranslated: boolean
+  status: Partial<StatusState>
+  records: RecordStat[]
+}) {
+  const { t, texts, showTranslated, status, records } = props
+  const [query, setQuery] = useState('')
   const totalUsage = records.reduce((sum, record) => sum + record.usageCount, 0)
   const consolidated = records.filter((record) => record.selectedForPhase2).length
   const topCited = records
@@ -315,11 +318,19 @@ function renderOverview(
     .slice(0, 5)
   const phase = status.phase ?? 'idle'
   const active = phase === 'phase1' || phase === 'phase2'
+  const needle = query.trim().toLowerCase()
+  const filtered = needle === ''
+    ? records
+    : records.filter((record) =>
+        record.sessionId.toLowerCase().includes(needle)
+        || record.rolloutSlug.toLowerCase().includes(needle)
+        || record.workspacePath.toLowerCase().includes(needle))
+  const maxUsage = Math.max(1, ...records.map((record) => record.usageCount))
   const card = (num: ReactNode, label: string): ReactNode => createElement('div', { className: 'dshmv-card', key: label },
     createElement('div', { className: 'dshmv-card-num' }, num),
     createElement('div', { className: 'dshmv-card-label' }, label),
   )
-  return createElement('div', { className: 'dshmv-fill' },
+  return createElement('div', { className: 'dshmv-scroll-fill' },
     createElement('div', { className: 'dshmv-cards' },
       card(records.length, t('viewer_stat_records')),
       card(consolidated, t('viewer_stat_consolidated')),
@@ -347,46 +358,20 @@ function renderOverview(
     records.length > 0 && topCited.length === 0
       ? createElement('div', { className: 'dshmv-empty' }, t('viewer_noCitations'))
       : null,
-  )
-}
-
-function SummaryView(props: { t: (k: string) => string; texts: Texts; showTranslated: boolean }) {
-  const { t, texts, showTranslated } = props
-  const text = showTranslated && texts.translatedSummary !== '' ? texts.translatedSummary : texts.summary
-  return text !== ''
-    ? createElement('div', { className: 'dshmv-md dshmv-md-fill' }, text)
-    : createElement('div', { className: 'dshmv-empty dshmv-fill' }, texts.failed ? t('viewer_decodeFailed') : t('viewer_empty'))
-}
-
-function renderIndex(t: (k: string) => string, texts: Texts, showTranslated: boolean): ReactNode {
-  const text = showTranslated && texts.translatedIndex !== '' ? texts.translatedIndex : texts.index
-  return text !== ''
-    ? createElement('div', { className: 'dshmv-md dshmv-md-fill' }, text)
-    : createElement('div', { className: 'dshmv-empty dshmv-fill' }, texts.failed ? t('viewer_decodeFailed') : t('viewer_empty'))
-}
-
-function RecordsView(props: { t: (k: string) => string; records: RecordStat[] }) {
-  const { t, records } = props
-  const [query, setQuery] = useState('')
-  const needle = query.trim().toLowerCase()
-  const filtered = needle === ''
-    ? records
-    : records.filter((record) =>
-        record.sessionId.toLowerCase().includes(needle)
-        || record.rolloutSlug.toLowerCase().includes(needle)
-        || record.workspacePath.toLowerCase().includes(needle))
-  const maxUsage = Math.max(1, ...records.map((record) => record.usageCount))
-  return createElement('div', { className: 'dshmv-fill' },
-    createElement('input', {
-      className: 'dshmv-search',
-      placeholder: t('viewer_search'),
-      value: query,
-      onChange: (event: { target: { value: string } }) => setQuery(event.target.value),
-    }),
-    createElement('div', { className: 'dshmv-scroll-fill' },
-      filtered.length === 0
-        ? createElement('div', { className: 'dshmv-empty' }, t('viewer_empty'))
-        : createElement('table', { className: 'dshmv-table' },
+    records.length === 0
+      ? null
+      : createElement('div', { className: 'dshmv-section', style: { marginTop: 14 } }, t('viewer_tab_records')),
+    records.length === 0
+      ? null
+      : createElement('input', {
+          className: 'dshmv-search',
+          placeholder: t('viewer_search'),
+          value: query,
+          onChange: (event: { target: { value: string } }) => setQuery(event.target.value),
+        }),
+    records.length === 0
+      ? createElement('div', { className: 'dshmv-empty' }, t('viewer_empty'))
+      : createElement('table', { className: 'dshmv-table' },
           createElement('thead', null, createElement('tr', null,
             createElement('th', null, t('viewer_col_session')),
             createElement('th', null, t('viewer_col_usage')),
@@ -416,8 +401,22 @@ function RecordsView(props: { t: (k: string) => string; records: RecordStat[] })
             )),
           ),
         ),
-    ),
   )
+}
+
+function SummaryView(props: { t: (k: string) => string; texts: Texts; showTranslated: boolean }) {
+  const { t, texts, showTranslated } = props
+  const text = showTranslated && texts.translatedSummary !== '' ? texts.translatedSummary : texts.summary
+  return text !== ''
+    ? createElement('div', { className: 'dshmv-md dshmv-md-fill' }, text)
+    : createElement('div', { className: 'dshmv-empty dshmv-fill' }, texts.failed ? t('viewer_decodeFailed') : t('viewer_empty'))
+}
+
+function renderIndex(t: (k: string) => string, texts: Texts, showTranslated: boolean): ReactNode {
+  const text = showTranslated && texts.translatedIndex !== '' ? texts.translatedIndex : texts.index
+  return text !== ''
+    ? createElement('div', { className: 'dshmv-md dshmv-md-fill' }, text)
+    : createElement('div', { className: 'dshmv-empty dshmv-fill' }, texts.failed ? t('viewer_decodeFailed') : t('viewer_empty'))
 }
 
 /** Title chip for the viewer tab. */

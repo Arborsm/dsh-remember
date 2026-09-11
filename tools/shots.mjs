@@ -440,8 +440,8 @@ async function main() {
     }
     await sleep(400)
     const paneClip = `[document.querySelector('[class*="panelBody"]')?.parentElement ?? document.querySelector('.dshmv-root')]`
-    // Every pane is the same box, so the four tab shots tile evenly.
-    for (const [name, tab] of [['02-viewer-overview', null], ['03-viewer-summary', '摘要'], ['04-viewer-index', '注册表'], ['05-viewer-records', '记录']]) {
+    // Every pane is the same box, so the three tab shots tile evenly.
+    for (const [name, tab] of [['02-viewer-overview', null], ['03-viewer-summary', '摘要'], ['04-viewer-index', '注册表']]) {
       if (tab != null) {
         await cdp.evaluate(`(() => {
           const node = [...document.querySelectorAll('.dshmv-tab')].find((entry) => entry.textContent === '${tab}')

@@ -643,8 +643,6 @@ function TransferSection(props: {
       style: { display: 'none' },
       onChange: pickImport,
     }),
-    createElement('p', { style: { fontSize: 11.5, opacity: 0.5, margin: '8px 2px 0', lineHeight: 1.5 } },
-      t('transfer_hint')),
     createElement('div', { style: { minHeight: 18, margin: '4px 2px 0' } },
       feedback != null
         ? createElement('span', { style: { fontSize: 12, color: feedbackIsError ? DANGER : 'inherit', opacity: feedbackIsError ? 1 : 0.8 } }, feedback)
