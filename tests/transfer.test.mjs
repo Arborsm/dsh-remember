@@ -101,7 +101,7 @@ fs.writeFileSync(badFile, gzipSync(JSON.stringify({ manifest: { schema: 'nope.v9
 await assert.rejects(() => importBundle(badFile, db, paths), /unsupported bundle schema/u)
 
 // 7. Export from the live store round-trips the same data (gzipped single file).
-const exportFile = path.join(tmp, 'export', 'memory.dshmem.json')
+const exportFile = path.join(tmp, 'export', 'memory.dshmem')
 const bundle = buildExportBundle(paths, db, 'dsh')
 writeExportBundle(bundle, exportFile)
 const exported = JSON.parse(gunzipSync(fs.readFileSync(exportFile)).toString('utf8'))

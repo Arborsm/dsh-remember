@@ -751,7 +751,7 @@ function renderMemoryPage(props: Record<string, any>) {
     : undefined
   const viewValue = viewSnapshot?.status === 'ready' ? viewSnapshot.value : undefined
   const exportBundle = viewValue != null && (viewValue.exportData ?? '') !== ''
-    ? { name: viewValue.exportName ?? 'memory.dshmem.json', data: viewValue.exportData as string, at: viewValue.exportAt ?? 0 }
+    ? { name: viewValue.exportName ?? 'memory.dshmem', data: viewValue.exportData as string, at: viewValue.exportAt ?? 0 }
     : undefined
   const active = status?.phase === 'phase1' || status?.phase === 'phase2'
   const statusLabel = active

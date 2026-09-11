@@ -85,7 +85,7 @@ export function buildExportBundle(paths: MemoryPaths, db: MemoryDatabase, source
   }
 }
 
-/** Write the whole bundle as one gzipped JSON file (`.dshmem.json` by convention). */
+/** Write the whole bundle as one gzipped JSON file (`.dshmem` by convention). */
 export function writeExportBundle(bundle: TransferBundle, destFile: string): TransferManifest {
   fs.mkdirSync(path.dirname(destFile), { recursive: true })
   fs.writeFileSync(destFile, gzipSync(JSON.stringify(bundle)))
@@ -185,7 +185,7 @@ export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, pa
     name: 'memory_export',
     description: 'Export the long-term memory workspace and stage-1 records into a single gzip-compressed bundle file.',
     parameters: {
-      destPath: { type: 'string', required: true, description: 'Absolute file path for the bundle, e.g. C:\\backups\\memory.dshmem.json' },
+      destPath: { type: 'string', required: true, description: 'Absolute file path for the bundle, e.g. C:\\backups\\memory.dshmem' },
     },
     output: {
       schema: { type: 'string' },

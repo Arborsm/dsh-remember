@@ -164,7 +164,7 @@ async function runTransfer(
       if (trimmed === '') {
         const data = gzipSync(Buffer.from(JSON.stringify(bundle), 'utf8')).toString('base64')
         const stamp = new Date().toISOString().slice(0, 19).replaceAll('-', '').replaceAll(':', '')
-        view({ exportName: `dsh-memory-${stamp}.dshmem.json`, exportData: data, exportAt: Date.now() })
+        view({ exportName: `dsh-memory-${stamp}.dshmem`, exportData: data, exportAt: Date.now() })
         status('idle', `transfer: exported ${bundle.records.length} records — choose where to save the bundle`)
         return
       }
@@ -185,7 +185,7 @@ async function runTransfer(
         return
       }
       // Browser-picked bundle: stage the bytes, import, clean up.
-      srcPath = path.join(os.tmpdir(), `dsh-memory-import-${Date.now()}.dshmem.json`)
+      srcPath = path.join(os.tmpdir(), `dsh-memory-import-${Date.now()}.dshmem`)
       fs.writeFileSync(srcPath, Buffer.from(payload, 'base64'))
     }
     const staged = rawPath.trim() === ''
