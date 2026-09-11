@@ -1,6 +1,6 @@
 {
   "name": "dsh-remember",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Cross-session long-term memory for the DeepSeek Harness: a two-phase extraction/consolidation pipeline over a file-based memory workspace, recall injection, a citation feedback loop, lease-based job semantics, plus a settings page, a sidebar status panel and a memory viewer.",
   "keywords": [
     "deepseek-harness",
