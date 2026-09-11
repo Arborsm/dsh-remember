@@ -28,12 +28,14 @@ export interface MemoryStatus {
 export type StatusWriter = (phase: string, detail: string, summaryPreview?: string) => void
 
 const MemoryCommandsSchema = Schema.object({
-  /** run-cycle | toggle-schedule | open-folder | export | import | refresh-view | translate-memory */
+  /** run-cycle | toggle-schedule | open-folder | export | export-done | import | refresh-view | translate-memory */
   action: Schema.string().default(''),
-  /** Bundle directory for export/import. */
+  /** Bundle file path for legacy export/import (model tools, dev). */
   path: Schema.string().default(''),
   /** Extra argument (translate-memory: target language tag, e.g. zh). */
   arg: Schema.string().default(''),
+  /** import: base64-encoded bundle picked in the browser; cleared once handled. */
+  payload: Schema.string().default(''),
   /** translate-memory: ignore the translation memory and rebuild everything. */
   force: Schema.boolean().default(false),
   requestedAt: Schema.number().default(0),
@@ -55,6 +57,10 @@ const MemoryViewSchema = Schema.object({
   translating: Schema.boolean().default(false),
   /** JSON array of stage-1 record stats for the records table. */
   records: Schema.string().default('[]'),
+  /** One-shot export handoff: the bundle the browser should save, base64 gzip. */
+  exportName: Schema.string().default(''),
+  exportData: Schema.string().default(''),
+  exportAt: Schema.number().default(0),
   updatedAt: Schema.number().default(0),
 })
 
@@ -69,6 +75,9 @@ export interface MemoryViewInput {
   translatedStale?: boolean
   translating?: boolean
   records?: string
+  exportName?: string
+  exportData?: string
+  exportAt?: number
 }
 
 interface MemoryViewSection {
@@ -76,6 +85,9 @@ interface MemoryViewSection {
   translatedStale: boolean
   translating: boolean
   records: string
+  exportName: string
+  exportData: string
+  exportAt: number
   updatedAt: number
 }
 
@@ -84,7 +96,16 @@ export type ViewWriter = (view: MemoryViewInput) => void
 /** Register the viewer namespace; returns a partial-merge writer (no-op without the settings provider). */
 export function installMemoryView(ctx: DshContext): ViewWriter {
   const texts = { summary: '', index: '', translatedSummary: '', translatedIndex: '' }
-  let current: MemoryViewSection = { blobs: encodeBlobs(texts), translatedStale: false, translating: false, records: '[]', updatedAt: 0 }
+  let current: MemoryViewSection = {
+    blobs: encodeBlobs(texts),
+    translatedStale: false,
+    translating: false,
+    records: '[]',
+    exportName: '',
+    exportData: '',
+    exportAt: 0,
+    updatedAt: 0,
+  }
   let replace: ((section: MemoryViewSection) => Promise<void>) | null = null
   let published = false
   /** Last persisted payload ignoring updatedAt: unchanged content skips the write. */
@@ -109,6 +130,9 @@ export function installMemoryView(ctx: DshContext): ViewWriter {
       translatedStale: view.translatedStale ?? current.translatedStale,
       translating: view.translating ?? current.translating,
       records: view.records ?? current.records,
+      exportName: view.exportName ?? current.exportName,
+      exportData: view.exportData ?? current.exportData,
+      exportAt: view.exportAt ?? current.exportAt,
       updatedAt: Date.now(),
     }
     published = true
@@ -160,7 +184,7 @@ export function installMemorySettings(ctx: DshContext, config: MemoryPluginConfi
  */
 export function installMemoryStatus(
   ctx: DshContext,
-): { write: StatusWriter; onCommand: (handler: (action: string, path: string, arg: string, force: boolean) => void) => void } {
+): { write: StatusWriter; onCommand: (handler: (action: string, path: string, arg: string, force: boolean, payload: string) => void) => void } {
   let replace: ((section: MemoryStatus) => Promise<void>) | null = null
   ctx.inject(['settings'], (serviceCtx) => {
     const provider = (serviceCtx as DshContext).settings
@@ -175,19 +199,20 @@ export function installMemoryStatus(
     const commandsScope = provider.register(MEMORY_COMMANDS_NS, MemoryCommandsSchema as never)
     let lastHandledAt = 0
     commandsScope.watch((next) => {
-      const command = next as { action?: string; path?: string; arg?: string; force?: boolean; requestedAt?: number }
+      const command = next as { action?: string; path?: string; arg?: string; payload?: string; force?: boolean; requestedAt?: number }
       const action = command?.action ?? ''
       const requestedAt = command?.requestedAt ?? 0
       if (action === '' || requestedAt <= lastHandledAt) return
       lastHandledAt = requestedAt
-      handler(action, command?.path ?? '', command?.arg ?? '', command?.force === true)
-      void commandsScope.replace({ action: '', path: '', arg: '', force: false, requestedAt }).catch(() => {})
+      handler(action, command?.path ?? '', command?.arg ?? '', command?.force === true, command?.payload ?? '')
+      // Clear promptly: a multi-MB import payload must not linger in settings.yaml.
+      void commandsScope.replace({ action: '', path: '', arg: '', payload: '', force: false, requestedAt }).catch(() => {})
     })
   })
-  const handler = (action: string, path: string, arg: string, force: boolean): void => {
-    commandHandler?.(action, path, arg, force)
+  const handler = (action: string, path: string, arg: string, force: boolean, payload: string): void => {
+    commandHandler?.(action, path, arg, force, payload)
   }
-  let commandHandler: ((action: string, path: string, arg: string, force: boolean) => void) | null = null
+  let commandHandler: ((action: string, path: string, arg: string, force: boolean, payload: string) => void) | null = null
   return {
     write: (phase, detail, summaryPreview = '') => {
       const write = replace

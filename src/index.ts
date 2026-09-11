@@ -1,5 +1,8 @@
 import { exec } from 'node:child_process'
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
+import { gzipSync } from 'node:zlib'
 
 import { MemoryDatabase } from './db.ts'
 import type { DshContext } from './dsh-types.ts'
@@ -53,7 +56,7 @@ export function apply(ctx: DshContext, config: MemoryPluginConfig): void {
     }
   }
   let schedulerHandle: SchedulerHandle | null = null
-  memoryStatus.onCommand((action, argPath, arg, force) => {
+  memoryStatus.onCommand((action, argPath, arg, force, payload) => {
     switch (action) {
       case 'run-cycle':
         schedulerHandle?.requestCycle()
@@ -68,7 +71,11 @@ export function apply(ctx: DshContext, config: MemoryPluginConfig): void {
         break
       case 'export':
       case 'import':
-        void runTransfer(action, argPath, db, paths, memoryStatus.write)
+        void runTransfer(action, argPath, payload, db, paths, viewWriter, memoryStatus.write)
+        break
+      case 'export-done':
+        // The browser saved (or dismissed) the bundle; drop the handoff payload.
+        viewWriter({ exportName: '', exportData: '', exportAt: 0 })
         break
       case 'refresh-view':
         refreshView()
@@ -135,37 +142,61 @@ async function runTranslate(
 }
 
 /**
- * Settings-page transfer actions. Outcomes land in the status namespace detail
- * (prefix `transfer:`), which the page renders under the transfer group.
+ * Settings-page transfer actions. Picker mode: export publishes the bundle
+ * base64+gzip into the view namespace (the browser shows a save dialog), import
+ * arrives the same way via the command payload and is staged to a temp file.
+ * A non-empty path keeps the legacy straight-to-disk behavior (model tools,
+ * dev). Outcomes land in the status namespace detail (prefix `transfer:`).
  */
 async function runTransfer(
   direction: 'export' | 'import',
   rawPath: string,
+  payload: string,
   db: MemoryDatabase,
   paths: MemoryPaths,
+  view: ViewWriter,
   status: StatusWriter,
 ): Promise<void> {
   const trimmed = rawPath.trim()
-  if (trimmed === '') {
-    status('idle', `transfer: ${direction} needs a bundle directory path`)
-    return
-  }
-  const target = path.resolve(trimmed)
   try {
     if (direction === 'export') {
+      const bundle = buildExportBundle(paths, db, 'dsh-web')
+      if (trimmed === '') {
+        const data = gzipSync(Buffer.from(JSON.stringify(bundle), 'utf8')).toString('base64')
+        const stamp = new Date().toISOString().slice(0, 19).replaceAll('-', '').replaceAll(':', '')
+        view({ exportName: `dsh-memory-${stamp}.dshmem.json`, exportData: data, exportAt: Date.now() })
+        status('idle', `transfer: exported ${bundle.records.length} records — choose where to save the bundle`)
+        return
+      }
+      const target = path.resolve(trimmed)
       if (target === paths.workspaceRoot || target.startsWith(paths.workspaceRoot + path.sep)) {
         status('idle', 'transfer: export destination must be outside the memory workspace')
         return
       }
-      const manifest = writeExportBundle(buildExportBundle(paths, db, 'dsh-web'), target)
+      const manifest = writeExportBundle(bundle, target)
       console.info(`[dsh-memory] exported ${manifest.recordCount} records, ${manifest.fileCount} files -> ${target}`)
       status('idle', `transfer: exported ${manifest.recordCount} records and ${manifest.fileCount} files to ${target}`)
-    } else {
-      const outcome = await importBundle(target, db, paths)
-      console.info(`[dsh-memory] imported ${outcome.imported} records (${outcome.duplicate} duplicates) from ${target}`)
+      return
+    }
+    let srcPath = trimmed
+    if (srcPath === '') {
+      if (payload === '') {
+        status('idle', 'transfer: import needs a bundle file')
+        return
+      }
+      // Browser-picked bundle: stage the bytes, import, clean up.
+      srcPath = path.join(os.tmpdir(), `dsh-memory-import-${Date.now()}.dshmem.json`)
+      fs.writeFileSync(srcPath, Buffer.from(payload, 'base64'))
+    }
+    const staged = rawPath.trim() === ''
+    try {
+      const outcome = await importBundle(path.resolve(srcPath), db, paths)
+      console.info(`[dsh-memory] imported ${outcome.imported} records (${outcome.duplicate} duplicates) from ${srcPath}`)
       status('idle',
         `transfer: imported ${outcome.imported} records, ${outcome.filesImported} files`
           + ` (${outcome.duplicate} duplicates skipped, ${outcome.targetWins} conflicts kept local)`)
+    } finally {
+      if (staged) fs.rmSync(srcPath, { force: true })
     }
   } catch (error) {
     console.warn(`[dsh-memory] transfer ${direction} failed:`, error)

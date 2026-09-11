@@ -5,7 +5,7 @@
  * Rendered with plain createElement — no JSX transform in this bundle.
  */
 
-import { createElement, useState } from 'react'
+import { createElement, useEffect, useRef, useState } from 'react'
 
 import { SnapshotStore } from './store.ts'
 import type { CatalogModel, ScopeView } from './types.ts'
@@ -511,78 +511,138 @@ interface CommandsView {
   set(field: string, value: unknown): Promise<void>
 }
 
+/** Upper bound for an import traveling base64 through the settings mirror. */
+const IMPORT_LIMIT_BYTES = 32 * 1024 * 1024
+
+/** Save bundle bytes: native save dialog where available, download fallback. */
+async function saveBundleFile(name: string, base64: string): Promise<void> {
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+  const picker = (window as unknown as {
+    showSaveFilePicker?: (options: { suggestedName: string }) => Promise<{
+      createWritable: () => Promise<{ write: (data: Uint8Array) => Promise<void>; close: () => Promise<void> }>
+    }>
+  }).showSaveFilePicker
+  if (picker != null) {
+    try {
+      const handle = await picker.call(window, { suggestedName: name })
+      const writable = await handle.createWritable()
+      await writable.write(bytes)
+      await writable.close()
+      return
+    } catch (error) {
+      if ((error as { name?: string })?.name === 'AbortError') return
+      // picker failed for another reason — fall through to the download path
+    }
+  }
+  const url = URL.createObjectURL(new Blob([bytes]))
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = name
+  anchor.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1_000)
+}
+
 /**
- * Import/export entry: the host-side transfer runs through the memory-commands
- * channel (path field + action), and the outcome comes back as a `transfer:`-
- * prefixed status detail line.
+ * Import/export entry: export asks the host for the bundle and saves it via
+ * the browser's file dialog; import reads a picked file and ships it base64
+ * through the memory-commands channel. Outcomes come back as `transfer:`-
+ * prefixed status detail lines.
  */
 function TransferSection(props: {
   t: (key: string) => string
   commands?: CommandsView
   statusDetail?: string
+  exportBundle?: { name: string; data: string; at: number }
 }) {
   const { t, commands } = props
-  const [exportPath, setExportPath] = useState('')
-  const [importPath, setImportPath] = useState('')
   const [requested, setRequested] = useState<'export' | 'import' | null>(null)
+  const [localError, setLocalError] = useState('')
+  const fileInput = useRef<HTMLInputElement | null>(null)
+  const lastExportAt = useRef(0)
 
-  const send = (action: 'export' | 'import', file: string): void => {
-    if (commands == null || file.trim() === '') return
-    setRequested(action)
+  const send = (action: string, path = '', payload = ''): void => {
+    if (commands == null) return
     void (async () => {
-      // Order matters: path and action must land before the timestamp trigger.
-      await commands.set('path', file.trim())
+      // Order matters: path/payload/action must land before the timestamp trigger.
+      await commands.set('path', path)
+      await commands.set('payload', payload)
       await commands.set('action', action)
       await commands.set('requestedAt', Date.now())
     })()
   }
 
-  const feedback = props.statusDetail?.startsWith('transfer:') === true
-    ? props.statusDetail.slice('transfer:'.length).trim()
-    : null
-  const feedbackIsError = feedback != null && /fail|need|must|unsupported|error/iu.test(feedback)
+  // A fresh export bundle arrived from the host: save it once per exportAt.
+  const bundleAt = props.exportBundle?.at ?? 0
+  useEffect(() => {
+    const bundle = props.exportBundle
+    if (bundle == null || bundle.data === '' || bundle.at <= lastExportAt.current) return undefined
+    lastExportAt.current = bundle.at
+    void saveBundleFile(bundle.name, bundle.data).finally(() => send('export-done'))
+    return undefined
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundleAt])
 
-  const transferRow = (
-    value: string,
-    setValue: (next: string) => void,
-    labelKey: string,
-    action: 'export' | 'import',
-  ) => {
-    const empty = value.trim() === ''
-    return createElement('div', { className: 'dshm-row', style: rowStyle() },
+  const pickImport = (event: { target: { files?: FileList | null; value: string } }): void => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (file == null) return
+    if (file.size > IMPORT_LIMIT_BYTES) {
+      setLocalError(t('transfer_tooBig'))
+      return
+    }
+    setLocalError('')
+    setRequested('import')
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result ?? '')
+      send('import', '', result.slice(result.indexOf(',') + 1))
+    }
+    reader.onerror = () => setLocalError(t('transfer_readFailed'))
+    reader.readAsDataURL(file)
+  }
+
+  const feedback = localError !== ''
+    ? localError
+    : props.statusDetail?.startsWith('transfer:') === true
+      ? props.statusDetail.slice('transfer:'.length).trim()
+      : null
+  const feedbackIsError = feedback != null && (localError !== '' || /fail|need|must|unsupported|error/iu.test(feedback))
+
+  const transferRow = (labelKey: string, descKey: string, action: 'export' | 'import') =>
+    createElement('div', { className: 'dshm-row', style: rowStyle() },
       createElement('div', { style: labelStackStyle() },
         createElement('span', { style: { fontSize: 13 } }, t(labelKey)),
+        createElement('span', { style: { fontSize: 11.5, opacity: 0.5 } }, t(descKey)),
       ),
-      createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 } },
-        createElement('input', {
-          type: 'text',
-          value,
-          spellCheck: false,
-          className: 'dshm-input',
-          placeholder: 'C:\\…\\memory.dshmem.json',
-          onChange: (event: { target: { value: string } }) => {
-            setValue(event.target.value)
-            setRequested(null)
-          },
-          style: inputStyle(false),
-        }),
-        createElement('button', {
-          type: 'button',
-          disabled: commands == null || empty,
-          className: 'dshm-btn',
-          onClick: () => send(action, value),
-          style: primaryButtonStyle(commands == null || empty),
-        }, t(`transfer_${action}`)),
-      ),
+      createElement('button', {
+        type: 'button',
+        disabled: commands == null,
+        className: 'dshm-btn',
+        onClick: () => {
+          setLocalError('')
+          setRequested(action)
+          if (action === 'export') send('export')
+          else fileInput.current?.click()
+        },
+        style: primaryButtonStyle(commands == null),
+      }, t(`transfer_${action}`)),
     )
-  }
 
   return createElement('section', { style: sectionStyle() },
     createElement('h3', { style: sectionHeaderStyle() }, t('group_transfer')),
     createElement('div', { style: { borderTop: `1px solid ${BORDER}` } },
-      transferRow(exportPath, setExportPath, 'transfer_exportPath', 'export'),
-      transferRow(importPath, setImportPath, 'transfer_importPath', 'import'),
+      transferRow('transfer_exportLabel', 'transfer_exportDesc', 'export'),
+      transferRow('transfer_importLabel', 'transfer_importDesc', 'import'),
     ),
+    createElement('input', {
+      type: 'file',
+      accept: '.json,.gz,.dshmem',
+      ref: fileInput,
+      style: { display: 'none' },
+      onChange: pickImport,
+    }),
     createElement('p', { style: { fontSize: 11.5, opacity: 0.5, margin: '8px 2px 0', lineHeight: 1.5 } },
       t('transfer_hint')),
     createElement('div', { style: { minHeight: 18, margin: '4px 2px 0' } },
@@ -686,6 +746,15 @@ function renderMemoryPage(props: Record<string, any>) {
   const disabled = !state.writable
 
   const status = statusSnapshot?.status === 'ready' ? statusSnapshot.value : undefined
+  const viewSnapshot = props.useMemoryView != null
+    ? props.useMemoryView((value: unknown) => value) as
+        | { status: string; value?: { exportName?: string; exportData?: string; exportAt?: number } }
+        | undefined
+    : undefined
+  const viewValue = viewSnapshot?.status === 'ready' ? viewSnapshot.value : undefined
+  const exportBundle = viewValue != null && (viewValue.exportData ?? '') !== ''
+    ? { name: viewValue.exportName ?? 'memory.dshmem.json', data: viewValue.exportData as string, at: viewValue.exportAt ?? 0 }
+    : undefined
   const active = status?.phase === 'phase1' || status?.phase === 'phase2'
   const statusLabel = active
     ? (status?.phase === 'phase1' ? t('phase1') : t('phase2'))
@@ -762,7 +831,7 @@ function renderMemoryPage(props: Record<string, any>) {
     fieldSection('models'),
     fieldSection('schedule'),
     fieldSection('recall'),
-    createElement(TransferSection, { t, commands: props.commands, statusDetail: status?.detail }),
+    createElement(TransferSection, { t, commands: props.commands, statusDetail: status?.detail, exportBundle }),
     createElement(AdvancedSection, {
       t,
       fields: groups.get('advanced') ?? [],

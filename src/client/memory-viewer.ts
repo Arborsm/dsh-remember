@@ -127,6 +127,10 @@ function ensureViewerStyles(): void {
     '.dshmv-usage-bar { height: 5px; border-radius: 3px; background: var(--dsw-alias-brand-primary, #4d6bfe); min-width: 2px; transition: width 200ms ease; }',
     '.dshmv-empty { color: var(--dsw-alias-label-tertiary, rgba(0,0,0,0.45)); padding: 24px 0; text-align: center; font-size: 12px; }',
     '.dshmv-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: var(--dsw-alias-label-tertiary, rgba(0,0,0,0.45)); }',
+    '.dshmv-section { margin: 2px 0 8px; font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary, rgba(0,0,0,0.65)); }',
+    '.dshmv-toprow { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; border: 0.5px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.1)); background: var(--dsw-alias-fill-tertiary, rgba(0,0,0,0.04)); margin-bottom: 6px; }',
+    '.dshmv-toprow-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 12px; }',
+    '.dshmv-toprow-meta { flex: 0 0 auto; font-size: 11px; color: var(--dsw-alias-label-tertiary, rgba(0,0,0,0.45)); font-variant-numeric: tabular-nums; }',
   ].join('\n')
   document.head.appendChild(tag)
   styleInjected = true
@@ -208,7 +212,6 @@ function renderViewer(props: ViewerProps) {
       await commands.set('requestedAt', Date.now())
     })()
   }
-  const effectiveText = showTranslated && hasTranslation ? texts.translatedSummary : texts.summary
 
   return createElement('div', { className: 'dshmv-root' },
     // tabs first: the action row sits below them, not against the pane header
@@ -289,7 +292,7 @@ function renderViewer(props: ViewerProps) {
       // Every tab fills the pane; its content block does the scrolling.
       'data-fill': 'true',
     },
-      tab === 'overview' ? renderOverview(t, texts, effectiveText, showTranslated, status, records)
+      tab === 'overview' ? renderOverview(t, texts, showTranslated, status, records)
         : tab === 'summary' ? createElement(SummaryView, { t, texts, showTranslated })
           : tab === 'index' ? renderIndex(t, texts, showTranslated)
             : createElement(RecordsView, { t, records }),
@@ -300,13 +303,16 @@ function renderViewer(props: ViewerProps) {
 function renderOverview(
   t: (k: string) => string,
   texts: Texts,
-  effectiveText: string,
   showTranslated: boolean,
   status: Partial<StatusState>,
   records: RecordStat[],
 ): ReactNode {
   const totalUsage = records.reduce((sum, record) => sum + record.usageCount, 0)
   const consolidated = records.filter((record) => record.selectedForPhase2).length
+  const topCited = records
+    .filter((record) => record.usageCount > 0)
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5)
   const phase = status.phase ?? 'idle'
   const active = phase === 'phase1' || phase === 'phase2'
   const card = (num: ReactNode, label: string): ReactNode => createElement('div', { className: 'dshmv-card', key: label },
@@ -319,6 +325,7 @@ function renderOverview(
       card(consolidated, t('viewer_stat_consolidated')),
       card(totalUsage, t('viewer_stat_citations')),
       card(formatBytes(texts.summary.length), t('viewer_stat_summarySize')),
+      card(formatBytes(texts.index.length), t('viewer_stat_indexSize')),
     ),
     createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 } },
       createElement('span', {
@@ -329,10 +336,17 @@ function renderOverview(
         : null,
       showTranslated ? createElement('span', { className: 'dshmv-badge dshmv-badge-ok' }, t('viewer_badgeTranslated')) : null,
     ),
-    effectiveText !== '' || texts.summary !== ''
-      ? createElement('div', { className: 'dshmv-md dshmv-md-fill' },
-          effectiveText !== '' ? effectiveText : texts.summary)
-      : createElement('div', { className: 'dshmv-empty dshmv-md-fill' }, texts.failed ? t('viewer_decodeFailed') : t('viewer_empty')),
+    records.length === 0
+      ? null
+      : createElement('div', { className: 'dshmv-section' }, t('viewer_topCited')),
+    ...topCited.map((record) => createElement('div', { className: 'dshmv-toprow', key: record.sessionId },
+      createElement('span', { className: 'dshmv-toprow-name' }, record.rolloutSlug || record.sessionId.slice(0, 8)),
+      createElement('span', { className: 'dshmv-toprow-meta' },
+        `${record.usageCount} · ${formatTime(record.lastUsage ?? record.sourceUpdatedAt)}`),
+    )),
+    records.length > 0 && topCited.length === 0
+      ? createElement('div', { className: 'dshmv-empty' }, t('viewer_noCitations'))
+      : null,
   )
 }
 
