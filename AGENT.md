@@ -50,7 +50,7 @@ node --import tsx/esm apps/cli/src/bin.ts web --patch <path/to>/cordis.dev.yml
 
 ## Release
 
-Bump `version` in package.json, push, then `gh release create vX.Y.Z`. The `publish.yml` workflow (npm trusted publisher, OIDC — no tokens) verifies and publishes on release.
+Bump `version` in package.json, push, then `gh release create vX.Y.Z`. The `publish.yml` workflow (npm trusted publisher, OIDC — no tokens) verifies the tree and stages the package; approve the staged version on npmjs.com (2FA) to make it live.
 
 ## Conventions
 

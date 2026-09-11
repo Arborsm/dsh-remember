@@ -36,4 +36,6 @@ jobs:
           git config --global user.name ci
       - run: pnpm test
 
-      - run: npm publish --provenance
+      # Staged publishing: the bundle lands in npm's staging area, a maintainer
+      # approves it on npmjs.com (or `npm stage approve`, needs 2FA).
+      - run: npm stage publish --provenance
