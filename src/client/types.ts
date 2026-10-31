@@ -84,9 +84,6 @@ export interface ClientContext {
   /** Typert gateway client: mounts a contribution, then `get('remote.<ns>')`. */
   remote?: {
     $mount(contribution: unknown): Promise<() => Promise<void>>
-    session?: {
-      modelCatalog(): Promise<{ ok: boolean; value?: unknown; error?: unknown }>
-    }
   }
   /** Service lookup (remote namespaces appear here after a mount). */
   get(name: string): unknown

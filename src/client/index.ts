@@ -236,6 +236,17 @@ const EN: Record<string, string> = {
 
 /** Activate the browser half: register the Memory settings page and the status pill. */
 export function apply(ctx: ClientContext): void {
+  try {
+    activate(ctx)
+  } catch (error) {
+    // A throw here aborts the whole web boot (the renderer reports
+    // <entry>: failed), so surface the real cause before rethrowing.
+    console.error('[dsh-memory] activation failed', error)
+    throw error
+  }
+}
+
+function activate(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh: ZH, en: EN }), 'dsh-memory: dictionaries')
   // Keep the raw citation XML out of the visible transcript (the host-side
   // citation loop reads it from the session log regardless).
@@ -305,6 +316,22 @@ export function apply(ctx: ClientContext): void {
       // the pane can fail to open only when the sidebar service is gone
     }
   }
+  // The settings page is one component with two seats: the standalone
+  // settings section and the plugin manager's per-bundle page.
+  const pageFace = (embedded: boolean) => () => ({
+    // The controller face carries edit/resetField/refreshCatalog; the
+    // renderer binds them as plain props, and the hooks compartment as
+    // useMemoryPage/useMemoryStatus/useMemoryView selector hooks.
+    ...card.inject(),
+    commands: commandsView,
+    embedded,
+    hooks: {
+      memoryPage: card.pageStore(),
+      memoryStatus: statusSource,
+      memoryView: viewSource,
+    },
+  })
+
   // Own Settings → Memory page (independent section in the settings sidebar).
   ctx.slots.inject('settings.section', () => ctx.slots.register(
     {
@@ -313,18 +340,20 @@ export function apply(ctx: ClientContext): void {
       order: 16,
       label: () => t_nav(ctx),
       locale: NS,
-      inject: () => ({
-        // The controller face carries edit/resetField/refreshCatalog; the
-        // renderer binds them as plain props, and the hooks compartment as
-        // useMemoryPage/useMemoryStatus/useMemoryView selector hooks.
-        ...card.inject(),
-        commands: commandsView,
-        hooks: {
-          memoryPage: card.pageStore(),
-          memoryStatus: statusSource,
-          memoryView: viewSource,
-        },
-      }),
+      inject: pageFace(false),
+    },
+    MemorySettingsPage,
+  ))
+
+  // Plugins → dsh-remember page: keyed by the bundle's package name. The
+  // plugin manager declares this slot as a child of its own page, so the
+  // registration waits until that page exists.
+  ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register(
+    {
+      name: 'plugins.bundle.config',
+      key: 'dsh-remember',
+      locale: NS,
+      inject: pageFace(true),
     },
     MemorySettingsPage,
   ))
@@ -351,12 +380,35 @@ function t_nav(ctx: ClientContext): string {
   return t('nav')
 }
 
+/** `remote.session` namespace (the session controller client half). */
+interface SessionRemote {
+  modelCatalog?: {
+    call(session: unknown): Promise<{ ok: boolean; value?: unknown; error?: unknown }>
+  }
+}
+
+/**
+ * The catalog is optional: `remote.session` is not in `inject`, because a
+ * composition without the session controller must still activate the panel
+ * (users can type `provider/model` by hand). Looking the service up through
+ * `ctx.get` keeps activation independent of the controller's ordering.
+ */
+function lookupSession(ctx: ClientContext): SessionRemote | null {
+  try {
+    const value = ctx.get('remote.session')
+    return typeof value === 'object' && value !== null ? value as SessionRemote : null
+  } catch {
+    return null
+  }
+}
+
 /** Query the Host model catalog and flatten it into selectable routes. */
 function catalogLoader(ctx: ClientContext): (() => Promise<CatalogModel[]>) | null {
-  const call = ctx.remote?.session?.modelCatalog
+  const session = lookupSession(ctx)
+  const call = session?.modelCatalog
   if (call == null) return null
   return async (): Promise<CatalogModel[]> => {
-    const result = await call.call(ctx.remote!.session!)
+    const result = await call.call(session)
     if (!result?.ok || result.value == null) {
       throw new Error('model catalog unavailable')
     }

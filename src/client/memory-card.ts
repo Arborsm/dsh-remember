@@ -709,9 +709,11 @@ function hintText(t: (key: string) => string, field: string): string {
 }
 
 /**
- * The dedicated Memory settings page (occupies one `settings.section` seat):
- * live status banner, divided-list sections with catalog-backed model pickers
- * and toggle switches, transfer actions, and a collapsed advanced section.
+ * The dedicated Memory settings page: live status banner, divided-list sections
+ * with catalog-backed model pickers and toggle switches, transfer actions, and a
+ * collapsed advanced section. Rendered both as its own `settings.section` seat
+ * and inside the plugin page's `plugins.bundle.config` seat, where `embedded`
+ * drops the heading the page already supplies.
  * Render failures surface inline instead of blanking the panel.
  */
 export function MemorySettingsPage(props: Record<string, any>) {
@@ -786,9 +788,14 @@ function renderMemoryPage(props: Record<string, any>) {
     )
   }
 
-  return createElement('div', { style: { maxWidth: 640, paddingBottom: 32 } },
-    createElement('h2', { style: { fontSize: 19, fontWeight: 650, margin: '0 0 4px', letterSpacing: 0.2 } }, t('title')),
-    createElement('p', { style: { fontSize: 13, opacity: 0.6, margin: '0 0 18px', lineHeight: 1.5 } }, t('intro')),
+  const embedded = props.embedded === true
+  return createElement('div', { style: { maxWidth: embedded ? undefined : 640, paddingBottom: embedded ? 0 : 32 } },
+    embedded
+      ? null
+      : createElement('h2', { style: { fontSize: 19, fontWeight: 650, margin: '0 0 4px', letterSpacing: 0.2 } }, t('title')),
+    embedded
+      ? null
+      : createElement('p', { style: { fontSize: 13, opacity: 0.6, margin: '0 0 18px', lineHeight: 1.5 } }, t('intro')),
     // status banner
     createElement('div', {
       style: {
