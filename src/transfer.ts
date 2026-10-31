@@ -3,7 +3,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 
-import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { ToolRuntime } from './dsh-types.ts'
 import type { MemoryDatabase, MemoryRecord } from './db.ts'
 import type { MemoryPaths } from './paths.ts'
@@ -181,11 +180,19 @@ export async function importBundle(bundlePath: string, db: MemoryDatabase, paths
 // ── model tools ─────────────────────────────────────────────────────────────
 
 export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, paths: MemoryPaths): void {
-  tools.register(defineTool({
+  // Parameters are plain JSON Schema: the host forwards them to the model
+  // verbatim, so the root must be `type: 'object'` (a bare property map is
+  // rejected by providers as `type: null`).
+  tools.register({
     name: 'memory_export',
     description: 'Export the long-term memory workspace and stage-1 records into a single gzip-compressed bundle file.',
     parameters: {
-      destPath: { type: 'string', required: true, description: 'Absolute file path for the bundle, e.g. C:\\backups\\memory.dshmem' },
+      type: 'object',
+      properties: {
+        destPath: { type: 'string', description: 'Absolute file path for the bundle, e.g. C:\\backups\\memory.dshmem' },
+      },
+      required: ['destPath'],
+      additionalProperties: false,
     },
     output: {
       schema: { type: 'string' },
@@ -200,13 +207,18 @@ export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, pa
       const manifest = writeExportBundle(bundle, dest)
       return `exported ${manifest.recordCount} records and ${manifest.fileCount} files to ${dest}`
     },
-  }))
+  })
 
-  tools.register(defineTool({
+  tools.register({
     name: 'memory_import',
     description: 'Import a memory bundle file produced by memory_export, merging it into the live memory store.',
     parameters: {
-      srcPath: { type: 'string', required: true, description: 'Absolute path of the bundle file (gzipped or plain JSON)' },
+      type: 'object',
+      properties: {
+        srcPath: { type: 'string', description: 'Absolute path of the bundle file (gzipped or plain JSON)' },
+      },
+      required: ['srcPath'],
+      additionalProperties: false,
     },
     output: {
       schema: { type: 'string' },
@@ -222,5 +234,5 @@ export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, pa
         `notes remapped: ${outcome.filesRemapped}`,
       ].join('; ')
     },
-  }))
+  })
 }

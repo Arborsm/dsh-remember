@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/). Release artifacts: [GitHub Releases](https://github.com/Arborsm/dsh-remember/releases).
 
+## [0.3.1] - 2026-11-01
+
+### Fixed
+
+- `memory_export` / `memory_import` declare plain object-rooted JSON Schema parameters; the author-facing shorthand went to the provider verbatim as `type: null`, which made every model request fail with `Invalid schema for function 'memory_export'` ([#1](https://github.com/Arborsm/dsh-remember/issues/1))
+- Dropped the build-time `@deepseek-ai/dsh-tools` alias and its stub, so no tool helper is bundled
+
 ## [0.3.0] - 2026-10-31
 
 ### Added
@@ -40,6 +47,7 @@ All notable changes to this project are documented here. Format follows [Keep a 
 
 First public release: background extraction from idle sessions, incremental consolidation into a plain-Markdown memory workspace, summary injection on every prompt, citation feedback loop, one-click translation with segment caching, gzip bundle export/import, sidebar status panel, memory viewer, and a settings page.
 
+[0.3.1]: https://github.com/Arborsm/dsh-remember/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Arborsm/dsh-remember/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Arborsm/dsh-remember/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Arborsm/dsh-remember/releases/tag/v0.1.0

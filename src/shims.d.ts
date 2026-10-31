@@ -27,10 +27,6 @@ declare module '@deepseek-ai/schemastery' {
   export default Schema
 }
 
-declare module '@deepseek-ai/dsh-tools' {
-  export function defineTool<T extends object>(definition: T): T
-}
-
 // react is a module-table external in the browser bundle (never installed
 // beside the plugin); the client half only uses these members.
 declare module 'react' {
