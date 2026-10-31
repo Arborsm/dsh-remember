@@ -14,7 +14,7 @@ import type { CatalogModel, ClientContext } from './types.ts'
 export const name = 'dsh-remember'
 
 /** Required browser services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'remote', 'remote.session']
+export const inject = ['slots', 'locale', 'remote']
 
 const NS = 'dsh-memory'
 
