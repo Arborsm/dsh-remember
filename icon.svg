@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="dshm" x1="10" y1="12" x2="54" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3F6DFF"/>
+      <stop offset="1" stop-color="#7A5CFF"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="13" width="44" height="11" rx="5.5" fill="url(#dshm)"/>
+  <rect x="10" y="28" width="34" height="11" rx="5.5" fill="url(#dshm)" opacity="0.85"/>
+  <rect x="10" y="43" width="22" height="11" rx="5.5" fill="url(#dshm)" opacity="0.6"/>
+  <circle cx="43" cy="48.5" r="5.5" fill="url(#dshm)"/>
+  <circle cx="43" cy="48.5" r="2" fill="#fff" opacity="0.92"/>
+</svg>

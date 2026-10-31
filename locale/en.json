@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Memory (dsh-remember)",
+    "description": "Cross-session long-term memory: idle sessions are extracted and consolidated into a searchable file library, recalled through prompt injection with citation tracking."
+  }
+}

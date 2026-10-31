@@ -1,7 +1,7 @@
 {
   "name": "dsh-remember",
   "version": "0.3.0",
-  "description": "Cross-session long-term memory for the DeepSeek Harness: a two-phase extraction/consolidation pipeline over a file-based memory workspace, recall injection, a citation feedback loop, lease-based job semantics, plus a settings page, a sidebar status panel and a memory viewer.",
+  "description": "Cross-session long-term memory for the DeepSeek Harness: idle sessions are extracted and consolidated into a searchable file-based memory workspace, then recalled through prompt injection with citation tracking, a settings page, a sidebar status entry and a memory viewer.",
   "keywords": [
     "deepseek-harness",
     "dsh",
@@ -24,12 +24,16 @@
   "exports": {
     ".": "./lib/index.js",
     "./client": "./lib/client.js",
-    "./typert": "./lib/typert.host.js"
+    "./typert": "./lib/typert.host.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "lib",
     "cordis.patch.yml",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "icon.svg",
+    "locale/*.json"
   ],
   "engines": {
     "dsh": ">=0.2.0-rc.1 <0.3.0-0"
@@ -62,5 +66,6 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "icon": "icon.svg"
 }
