@@ -249,7 +249,9 @@ async function runConsolidatorAgent(
             id: `dsh-memory-phase2-${randomUUID()}`,
             role: 'user',
             content: [{ type: 'text', text: prompt }],
-            source: { kind: 'plugin', plugin: 'dsh-remember', form: 'instructions' },
+            // Session format v4 rejects the retired catch-all `plugin` kind:
+            // a producer-owned kind names this plugin directly.
+            source: { kind: 'dsh-remember', form: 'instructions' },
           })
         } catch (error) {
           console.warn('[dsh-memory] consolidator followup failed:', error)

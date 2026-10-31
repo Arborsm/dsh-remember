@@ -6,9 +6,13 @@
 
 ```text
 src/            host half (cordis plugin, bundled to lib/index.js by tsdown)
-  index.ts        wiring: paths, database, settings & status channels, read path,
-                  citation loop, scheduler, frontend commands
+  index.ts        wiring: paths, database, memory service, read path,
+                  citation loop, scheduler
   config.ts       Schemastery config; all defaults live here
+  state.ts        effective config (loader base + ~/.dsh-memory overrides),
+                  status and viewer state snapshots
+  rpc.ts          the `memory` Host service: config, status, view, commands
+  typert.ts       hand-written ./typert manifest (emitted as lib/typert.host.js)
   db.ts           node:sqlite: stage1_outputs / jobs / translation_segments,
                   leases, watermarks, cooldowns, pruning
   transcript.ts   session -> redacted transcript (secret masking + middle truncation)
@@ -18,8 +22,7 @@ src/            host half (cordis plugin, bundled to lib/index.js by tsdown)
   workspace.ts    workspace skeleton, file-category contract, rollout files, git baseline
   read-path.ts    systemPrompt.context() summary injection, prefers fresh translations
   citations.ts    parses <dsh-mem-citation>, writes back usage
-  scheduler.ts    startup trigger + interval loop, maintains memory-status
-  settings.ts     four settings namespaces, frontend command channel, view publishing (gzip blobs)
+  scheduler.ts    startup trigger + interval loop, publishes status
   view.ts         view assembly, translation generation (translation memory), meta & pruning
   transfer.ts     memory_export / memory_import and bundle encoding
   llm.ts          one-shot completion wrapper (usage / finish / reasoning counting)
@@ -54,8 +57,9 @@ Bump `version` in package.json, push, then `gh release create vX.Y.Z`. The `publ
 
 ## Conventions
 
-- **The two halves communicate only through settings namespaces.** `memory` (config), `memory-status` (phase & summary preview), `memory-commands` (`{action, path, arg, force, requestedAt}`), `memory-view` (viewer data). Third-party plugins can't get typert artifacts from `ctx.remote.*` — do not add RPC.
-- **Write `action` before `requestedAt`.** The host triggers its watch on the timestamp change; reversed order drops the command.
+- **The two halves talk through one Host remote service: `memory`.** The host `ctx.provide('memory', service)` with the service object branded `typertRemote = {service, serviceKey: 'memory', namespace: 'memory'}`; the browser half mounts its own contribution with `ctx.remote.$mount(...)` and then reads `ctx.get('remote.memory')`. The manifest in `src/typert.ts` is hand-written and must stay identical to `CONTRIBUTION` in `src/client/remote.ts` (method names, parameter wires, result shape); `package.json` exports it as `./typert` so the typert loader finds it, and the loader only reads the Host face.
+- **A new remote method is four edits.** Host service in `src/rpc.ts`, its strict codec + descriptor in `src/typert.ts`, the matching descriptor in `src/client/remote.ts`, and the client call site.
+- **A missing wire field is not `undefined`.** The gateway JSON-checks the parsed value, so an own `undefined` property fails the call; omit absent optional fields instead.
 - **Registration is an effect.** All contributions go through `ctx.effect()` / `ctx.on()`; disposers returned by registrations belong to the effect.
 - **Changing a config field means touching three places.** The schema in `src/config.ts` together with `MemoryPluginConfig`, the settings-page field groups (`FIELD_SPECS` in `memory-card.ts`), and the zh/en copy in `src/client/index.ts` (`field_*` / `hint_*`) must be updated together.
 - **No compatibility layers.** Historical formats (uncompressed JSON, directory bundles, old translation file names) are handled only on import paths; internal data structures get no legacy branches.

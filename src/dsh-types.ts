@@ -15,6 +15,8 @@ export interface CordisContext {
   ): void
   /** Optional service access by name (undefined when absent). */
   get(name: string): unknown
+  /** Publish a service under a name other plugins resolve through `ctx.get`. */
+  provide(name: string, value: unknown): void
   plugin(module: unknown): unknown
 }
 
@@ -22,9 +24,9 @@ export interface CordisContext {
 
 export type SessionId = string & { readonly __brand: 'SessionId' }
 
+/** Session format v4 requires a producer-owned kind; `plugin` is retired. */
 export interface UserMessageSource {
-  kind: 'user' | 'plugin' | 'model' | 'tool'
-  plugin?: string
+  kind: 'user' | 'dsh-remember' | 'model' | 'tool'
   form?: 'instructions' | 'catalog' | 'snapshot' | 'notice' | 'relay' | 'recall'
   summary?: string
   sections?: Array<{ name: string; text: string }>
@@ -210,31 +212,6 @@ export interface AgentDefaultModelService {
   currentSelection(): LlmModelSelection
 }
 
-// ── settings (packages/settings/settings) ───────────────────────────────────
-
-export interface SettingsOwnerScope {
-  get(): unknown
-  watch(callback: (next: unknown, prev: unknown) => void | Promise<void>): () => void
-  update(patch: object): Promise<void>
-  replace(section: object): Promise<void>
-}
-
-/** The settings provider face this plugin uses (optional in a composition). */
-export interface SettingsProviderFace {
-  installSection(
-    owner: unknown,
-    ns: string,
-    schema: unknown,
-    entry: unknown,
-    hooks: {
-      validate?: (value: unknown) => void
-      setSource: (get: () => Record<string, unknown>) => void
-      onChange: () => void
-    },
-  ): void
-  register(ns: string, schema: unknown, options?: { base?: unknown }): SettingsOwnerScope
-}
-
 // ── assembly ────────────────────────────────────────────────────────────────
 
 /** The dsh Context as this plugin consumes it (documented service names). */
@@ -245,6 +222,5 @@ export interface DshContext extends CordisContext {
   sessionPersistence: SessionPersistence
   agents: AgentRegistry
   agentDefaultModel: AgentDefaultModelService
-  settings?: SettingsProviderFace
   agentPresets?: AgentPresetsService
 }

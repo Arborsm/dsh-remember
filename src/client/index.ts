@@ -5,6 +5,7 @@
  */
 
 import { MemoryCardController, MemorySettingsPage } from './memory-card.ts'
+import { MemoryBridge, mountMemoryBridge } from './remote.ts'
 import { MemoryFooterAction } from './sidebar-action.ts'
 import { installCitationStripper } from './citation-stripper.ts'
 import { MEMORY_VIEWER_ID, MEMORY_VIEWER_KIND, MemoryViewerBody, MemoryViewerTitle } from './memory-viewer.ts'
@@ -13,7 +14,7 @@ import type { CatalogModel, ClientContext } from './types.ts'
 export const name = 'dsh-remember'
 
 /** Required browser services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'settingsScope', 'remote', 'remote.session']
+export const inject = ['slots', 'locale', 'remote', 'remote.session']
 
 const NS = 'dsh-memory'
 
@@ -240,30 +241,34 @@ export function apply(ctx: ClientContext): void {
   // citation loop reads it from the session log regardless).
   ctx.effect(() => installCitationStripper(), 'dsh-memory: citation stripper')
 
-  const cardScope = ctx.settingsScope.bind({ namespace: 'memory' })
-  const statusScope = ctx.settingsScope.bind({ namespace: 'memory-status' })
-  const commandsScope = ctx.settingsScope.bind({ namespace: 'memory-commands' })
-  const viewerScope = ctx.settingsScope.bind({ namespace: 'memory-view' })
-  const card = new MemoryCardController(cardScope, catalogLoader(ctx))
-  // Bound closures: detached scope methods may rely on `this`.
-  const statusSource = {
-    getSnapshot: () => statusScope.getSnapshot(),
-    subscribe: (listener: () => void) => statusScope.subscribe(listener),
-  }
-  const viewSource = {
-    getSnapshot: () => viewerScope.getSnapshot(),
-    subscribe: (listener: () => void) => viewerScope.subscribe(listener),
-  }
-  const commandsView = {
-    set: (field: string, value: unknown) => commandsScope.set(field, value),
-    unset: (field: string) => commandsScope.unset(field),
-  }
-  const memoryView = {
-    set: (field: string, value: unknown) => cardScope.set(field, value),
-    unset: (field: string) => cardScope.unset(field),
-    getSnapshot: () => cardScope.getSnapshot(),
-    subscribe: (listener: () => void) => cardScope.subscribe(listener),
-  }
+  const bridge = new MemoryBridge()
+  // `$mount` is async while slot registrations are not: the bridge starts with
+  // loading snapshots and fills them in as soon as the namespace is installed.
+  ctx.effect(() => {
+    let dispose: (() => Promise<void>) | undefined
+    let cancelled = false
+    void mountMemoryBridge(bridge, ctx)
+      .then((mounted) => {
+        if (cancelled) {
+          void mounted()
+          return
+        }
+        dispose = mounted
+      })
+      .catch((error) => {
+        console.warn('[dsh-memory] memory remote unavailable:', error)
+      })
+    return () => {
+      cancelled = true
+      if (dispose != null) void dispose()
+    }
+  }, 'dsh-memory: memory remote')
+
+  const card = new MemoryCardController(bridge.configScope, catalogLoader(ctx))
+  const statusSource = bridge.statusSource
+  const viewSource = bridge.viewSource
+  const commandsView = bridge.commands
+  const memoryView = bridge.configScope
 
   // Standalone viewer page: a right-sidebar tab (ui-sidebar-right is optional
   // in the composition, so the whole registration waits on the service).

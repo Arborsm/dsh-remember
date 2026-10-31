@@ -4,7 +4,7 @@
  * runtime, keeping the client bundle free of cross-plugin value imports.
  */
 
-/** Client settingsScope mirror snapshot (ui-settings contract). */
+/** Snapshot of one client mirror store backed by the `memory` remote. */
 export interface ScopeSnapshot<T = Record<string, unknown>> {
   status: 'loading' | 'ready' | 'unavailable'
   value: T | undefined
@@ -15,12 +15,46 @@ export interface ScopeSnapshot<T = Record<string, unknown>> {
   mode: 'host' | 'memory'
 }
 
-/** One bound namespace scope (ui-settings settingsScope.bind). */
+/** One bound namespace scope (superseded by remote-backed stores). */
 export interface ScopeView {
   getSnapshot(): ScopeSnapshot
   subscribe(listener: () => void): () => void
   set(field: string, value: unknown): Promise<void>
   unset(field: string): Promise<void>
+}
+
+/** One user action sent to the Host `memory` service. */
+export interface MemoryCommandRequest {
+  action: string
+  path?: string
+  arg?: string
+  payload?: string
+  force?: boolean
+}
+
+/** Handoff for a bundle the browser should save itself. */
+export interface MemoryBundleHandoff {
+  name: string
+  data: string
+}
+
+export interface MemoryCommandResult {
+  ok: boolean
+  detail: string
+  bundle?: MemoryBundleHandoff
+  /** Fresh viewer payload when the command changed what the viewer reads. */
+  view?: {
+    blobs: string
+    records: string
+    translatedStale: boolean
+    translating: boolean
+    updatedAt: number
+  }
+}
+
+/** Client-callable action runner (remote.memory.runCommand). */
+export interface CommandRunner {
+  run(request: MemoryCommandRequest): Promise<MemoryCommandResult>
 }
 
 /** One model route offered by the Host catalog (remote.session.modelCatalog). */
@@ -47,12 +81,15 @@ export interface LocaleApi {
 export interface ClientContext {
   slots: SlotsApi
   locale: LocaleApi
-  settingsScope: { bind(spec: { namespace: string }): ScopeView }
+  /** Typert gateway client: mounts a contribution, then `get('remote.<ns>')`. */
   remote?: {
+    $mount(contribution: unknown): Promise<() => Promise<void>>
     session?: {
       modelCatalog(): Promise<{ ok: boolean; value?: unknown; error?: unknown }>
     }
   }
+  /** Service lookup (remote namespaces appear here after a mount). */
+  get(name: string): unknown
   /** Right-sidebar tab type registry (ui-sidebar-right; optional in the composition). */
   sidebarRightTabs?: { register(definition: Record<string, unknown>): () => void }
   /** Right-sidebar controller (ui-sidebar-right); opens viewer tabs programmatically. */

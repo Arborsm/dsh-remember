@@ -4,16 +4,16 @@
  * and the searchable records table), summary (original / translated), and the
  * MEMORY.md registry.
  *
- * Data arrives through the `memory-view` / `memory-status` settings mirrors:
- * a registration's `inject.hooks` compartment is synthesized by the slot
- * framework into `use<Name>` selector hooks (the same face the float uses for
+ * Data arrives through the `memory` remote namespace: a registration's
+ * `inject.hooks` compartment is synthesized by the slot framework into
+ * `use<Name>` selector hooks (the same face the float uses for
  * `useMemoryStatus`). The large texts travel gzip+base64 in `blobs` and are
- * decoded with DecompressionStream. Actions go back through the
- * `memory-commands` namespace.
+ * decoded with DecompressionStream. Actions go back through
+ * `remote.memory.runCommand`.
  */
 
 import { createElement, useEffect, useState } from 'react'
-import type { ScopeView } from './types.ts'
+import type { CommandRunner } from './types.ts'
 
 export const MEMORY_VIEWER_KIND = 'dsh-memory'
 export const MEMORY_VIEWER_ID = 'dsh-remember/viewer'
@@ -61,7 +61,7 @@ interface ViewerProps {
   t: (key: string) => string
   useMemoryView?: SelectorHook
   useMemoryStatus?: SelectorHook
-  commands?: ScopeView
+  commands?: CommandRunner
 }
 
 const EMPTY_TEXTS: Texts = { summary: '', index: '', translatedSummary: '', translatedIndex: '', failed: false }
@@ -206,12 +206,7 @@ function renderViewer(props: ViewerProps) {
   const sendCommand = (action: string, arg = '', force = false): void => {
     const commands = props.commands
     if (commands == null) return
-    void (async () => {
-      if (arg !== '') await commands.set('arg', arg)
-      if (force) await commands.set('force', true)
-      await commands.set('action', action)
-      await commands.set('requestedAt', Date.now())
-    })()
+    void commands.run({ action, arg: arg === '' ? undefined : arg, force: force || undefined })
   }
 
   return createElement('div', { className: 'dshmv-root' },

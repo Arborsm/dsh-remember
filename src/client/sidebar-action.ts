@@ -5,14 +5,13 @@
  * `position: fixed` with an offset measured from the trigger, because the
  * sidebar clips overflow and a 320px surface would otherwise be cut off.
  *
- * Reads the `memory-status` namespace through the client settings mirror
- * (phase/preview arrive via the forwarded settings/document-updated event —
- * no custom RPC) and acts through the `memory-commands` namespace the host
- * watches. Every action lives in the panel.
+ * Reads status and config through the `memory` remote namespace (polls
+ * `getStatus`), and acts through `runCommand`. Every action lives in the
+ * panel.
  */
 
 import { createElement, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ScopeView } from './types.ts'
+import type { CommandRunner, ScopeView } from './types.ts'
 
 type SelectorHook = (selector: (value: unknown) => unknown) => unknown
 
@@ -75,7 +74,7 @@ interface ActionProps {
   /** Owner prop of `sidebar.footer.action`: false while the sidebar is a rail. */
   wide?: boolean
   useMemoryStatus?: SelectorHook
-  commands?: ScopeView
+  commands?: CommandRunner
   settings?: ScopeView
   /** Opens the standalone memory viewer page (right sidebar tab). */
   openViewer?: () => void
@@ -151,11 +150,7 @@ function renderAction(props: ActionProps) {
   const sendCommand = (action: string): void => {
     const commands = props.commands
     if (commands == null) return
-    // Ordered: the host watch fires on the timestamp, so the action must land first.
-    void (async () => {
-      await commands.set('action', action)
-      await commands.set('requestedAt', Date.now())
-    })()
+    void commands.run({ action })
   }
 
   const toggleSetting = (field: string, value: unknown): void => {

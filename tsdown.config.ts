@@ -25,7 +25,9 @@ const alias: Record<string, string> = fs.existsSync(vendor('cordis'))
     }
 
 const host: UserConfig = {
-  entry: ['src/index.ts'],
+  // index.ts is the plugin entry; typert.ts is emitted beside it so the
+  // package's "./typert" export points at a self-contained manifest module.
+  entry: { index: 'src/index.ts', 'typert.host': 'src/typert.ts' },
   outDir: 'lib',
   format: 'esm',
   platform: 'node',

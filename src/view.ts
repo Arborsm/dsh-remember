@@ -6,7 +6,7 @@ import type { MemoryDatabase } from './db.ts'
 import type { DshContext } from './dsh-types.ts'
 import type { MemoryPaths } from './paths.ts'
 import type { MemoryPluginConfig } from './config.ts'
-import type { ViewWriter } from './settings.ts'
+import type { ViewWriter } from './state.ts'
 import { resolveModelConfig, oneShot, offReasoningEffort } from './llm.ts'
 import { readTextFileOrNull, writeTextFileIfChanged } from './workspace.ts'
 
@@ -267,7 +267,7 @@ async function translateSegment(
       id: `dsh-memory-translate-${label}-${Date.now()}`,
       role: 'user',
       content: [{ type: 'text', text: segment }],
-      source: { kind: 'plugin', plugin: 'dsh-remember' },
+      source: { kind: 'dsh-remember' },
     }],
     maxTokens: TRANSLATE_MAX_TOKENS,
     reasoningEffort,

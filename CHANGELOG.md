@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow [SemVer](https://semver.org/). Release artifacts: [GitHub Releases](https://github.com/Arborsm/dsh-remember/releases).
 
+## [0.3.0] - 2026-10-31
+
+### Changed
+
+- Requires dsh `>=0.2.0-rc.1 <0.3.0-0` (`engines.dsh`); the 0.1.x settings-provider API is gone
+- Host and browser halves now talk over a single `memory` remote service exposed through a hand-written `./typert` manifest and mounted with `ctx.remote.$mount`; the removed `memory-status` / `memory-commands` / `memory-view` settings namespaces are gone
+- Settings-page edits persist to `~/.dsh-memory/config.json` as overrides on the loader config, instead of rewriting the profile patch
+- Export returns the bundle over the remote call and the browser saves it with the same file-picker flow
+- Phase-1/phase-2 sub-agent messages use the v4 producer-owned source kind `dsh-remember`; `plugin` is rejected by session format v4
+
+### Removed
+
+- `src/settings.ts` (settings provider surface and the four namespaces)
+
 ## [0.2.0] - 2026-09-11
 
 ### Changed

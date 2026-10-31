@@ -5,7 +5,7 @@ import type { DshContext } from './dsh-types.ts'
 import type { MemoryDatabase } from './db.ts'
 import type { MemoryPaths } from './paths.ts'
 import type { MemoryPluginConfig } from './config.ts'
-import type { StatusWriter } from './settings.ts'
+import type { StatusWriter } from './state.ts'
 import { runPhase1 } from './phase1.ts'
 import { runPhase2, ensureWorkspaceSkeleton } from './phase2.ts'
 

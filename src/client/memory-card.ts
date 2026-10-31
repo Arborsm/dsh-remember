@@ -5,10 +5,10 @@
  * Rendered with plain createElement — no JSX transform in this bundle.
  */
 
-import { createElement, useEffect, useRef, useState } from 'react'
+import { createElement, useRef, useState } from 'react'
 
 import { SnapshotStore } from './store.ts'
-import type { CatalogModel, ScopeView } from './types.ts'
+import type { CatalogModel, CommandRunner, ScopeView } from './types.ts'
 
 let pageStyleInjected = false
 
@@ -507,11 +507,7 @@ function ModelSelect(props: {
   }, options)
 }
 
-interface CommandsView {
-  set(field: string, value: unknown): Promise<void>
-}
-
-/** Upper bound for an import traveling base64 through the settings mirror. */
+/** Upper bound for an import traveling base64 through the host remote. */
 const IMPORT_LIMIT_BYTES = 32 * 1024 * 1024
 
 /** Save bundle bytes: native save dialog where available, download fallback. */
@@ -545,44 +541,48 @@ async function saveBundleFile(name: string, base64: string): Promise<void> {
 }
 
 /**
- * Import/export entry: export asks the host for the bundle and saves it via
- * the browser's file dialog; import reads a picked file and ships it base64
- * through the memory-commands channel. Outcomes come back as `transfer:`-
- * prefixed status detail lines.
+ * Import/export entry: export returns the bundle from the host and saves it
+ * through the browser's file dialog; import reads a picked file and hands the
+ * bytes back to the host. Outcomes come back as `transfer:`-prefixed status
+ * detail lines.
  */
 function TransferSection(props: {
   t: (key: string) => string
-  commands?: CommandsView
+  commands?: CommandRunner
   statusDetail?: string
-  exportBundle?: { name: string; data: string; at: number }
 }) {
   const { t, commands } = props
   const [requested, setRequested] = useState<'export' | 'import' | null>(null)
   const [localError, setLocalError] = useState('')
   const fileInput = useRef<HTMLInputElement | null>(null)
-  const lastExportAt = useRef(0)
 
-  const send = (action: string, path = '', payload = ''): void => {
+  const exportBundle = async (): Promise<void> => {
     if (commands == null) return
-    void (async () => {
-      // Order matters: path/payload/action must land before the timestamp trigger.
-      await commands.set('path', path)
-      await commands.set('payload', payload)
-      await commands.set('action', action)
-      await commands.set('requestedAt', Date.now())
-    })()
+    setLocalError('')
+    setRequested('export')
+    try {
+      const result = await commands.run({ action: 'export' })
+      if (result.bundle != null && result.bundle.data !== '') {
+        await saveBundleFile(result.bundle.name, result.bundle.data)
+        return
+      }
+      if (!result.ok) setLocalError(result.detail)
+    } catch (error) {
+      setLocalError(String(error))
+    }
   }
 
-  // A fresh export bundle arrived from the host: save it once per exportAt.
-  const bundleAt = props.exportBundle?.at ?? 0
-  useEffect(() => {
-    const bundle = props.exportBundle
-    if (bundle == null || bundle.data === '' || bundle.at <= lastExportAt.current) return undefined
-    lastExportAt.current = bundle.at
-    void saveBundleFile(bundle.name, bundle.data).finally(() => send('export-done'))
-    return undefined
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundleAt])
+  const importBundle = async (payload: string): Promise<void> => {
+    if (commands == null) return
+    setLocalError('')
+    setRequested('import')
+    try {
+      const result = await commands.run({ action: 'import', payload })
+      if (!result.ok) setLocalError(result.detail)
+    } catch (error) {
+      setLocalError(String(error))
+    }
+  }
 
   const pickImport = (event: { target: { files?: FileList | null; value: string } }): void => {
     const file = event.target.files?.[0]
@@ -592,12 +592,10 @@ function TransferSection(props: {
       setLocalError(t('transfer_tooBig'))
       return
     }
-    setLocalError('')
-    setRequested('import')
     const reader = new FileReader()
     reader.onload = () => {
       const result = String(reader.result ?? '')
-      send('import', '', result.slice(result.indexOf(',') + 1))
+      void importBundle(result.slice(result.indexOf(',') + 1))
     }
     reader.onerror = () => setLocalError(t('transfer_readFailed'))
     reader.readAsDataURL(file)
@@ -623,7 +621,7 @@ function TransferSection(props: {
         onClick: () => {
           setLocalError('')
           setRequested(action)
-          if (action === 'export') send('export')
+          if (action === 'export') void exportBundle()
           else fileInput.current?.click()
         },
         style: primaryButtonStyle(commands == null),
@@ -744,15 +742,6 @@ function renderMemoryPage(props: Record<string, any>) {
   const disabled = !state.writable
 
   const status = statusSnapshot?.status === 'ready' ? statusSnapshot.value : undefined
-  const viewSnapshot = props.useMemoryView != null
-    ? props.useMemoryView((value: unknown) => value) as
-        | { status: string; value?: { exportName?: string; exportData?: string; exportAt?: number } }
-        | undefined
-    : undefined
-  const viewValue = viewSnapshot?.status === 'ready' ? viewSnapshot.value : undefined
-  const exportBundle = viewValue != null && (viewValue.exportData ?? '') !== ''
-    ? { name: viewValue.exportName ?? 'memory.dshmem', data: viewValue.exportData as string, at: viewValue.exportAt ?? 0 }
-    : undefined
   const active = status?.phase === 'phase1' || status?.phase === 'phase2'
   const statusLabel = active
     ? (status?.phase === 'phase1' ? t('phase1') : t('phase2'))
@@ -829,7 +818,7 @@ function renderMemoryPage(props: Record<string, any>) {
     fieldSection('models'),
     fieldSection('schedule'),
     fieldSection('recall'),
-    createElement(TransferSection, { t, commands: props.commands, statusDetail: status?.detail, exportBundle }),
+    createElement(TransferSection, { t, commands: props.commands, statusDetail: status?.detail }),
     createElement(AdvancedSection, {
       t,
       fields: groups.get('advanced') ?? [],
