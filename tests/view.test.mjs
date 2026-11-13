@@ -94,7 +94,7 @@ assert.ok(!fs.existsSync(path.join(workspace, 'MEMORY.en.md')), 'translation pru
 // 8. publishMemoryView mirrors the raw texts (the settings writer compresses
 //    them into `blobs`; that encoding is covered by the boot smoke).
 let published = null
-publishMemoryView(viewDb, paths, (view) => { published = view })
+publishMemoryView(viewDb, paths, { maxUnusedDays: 30, phase2SuccessCooldownSeconds: 0 }, (view) => { published = view })
 assert.ok(published.translatedSummary.startsWith('[zh] v1'), 'translated summary published')
 assert.ok(published.summary.startsWith('v1'), 'original summary published')
 assert.equal(published.translatedStale, false, 'stale flag published')
