@@ -50,7 +50,7 @@ export function apply(ctx: DshContext, config: MemoryPluginConfig): void {
 
   const refreshView = (): void => {
     try {
-      publishMemoryView(db, paths, state.writeView)
+      publishMemoryView(db, paths, config, state.writeView)
     } catch (error) {
       console.warn('[dsh-memory] view publish failed:', error)
     }
@@ -65,7 +65,7 @@ export function apply(ctx: DshContext, config: MemoryPluginConfig): void {
     paths,
     config,
     state,
-    requestCycle: () => schedulerHandle?.requestCycle(),
+    requestCycle: (force?: boolean) => schedulerHandle?.requestCycle(force),
   })
   if (typeof ctx.provide === 'function') {
     ctx.provide('memory', service)
@@ -78,7 +78,7 @@ export function apply(ctx: DshContext, config: MemoryPluginConfig): void {
   }
 
   registerCitationLoop(ctx, db)
-  registerTransferTools(ctx.tools, db, paths)
+  registerTransferTools(ctx.tools, db, paths, () => schedulerHandle?.requestCycle(true))
   schedulerHandle = startScheduler(ctx, db, paths, config, state.writeStatus, {
     lastCycleAt: null,
     lastError: null,

@@ -35,6 +35,9 @@ Folder structure (under {MEMORY_ROOT}/):
     everything valuable from the raw rollout.
 - extensions/<name>/
   - Optional memory extension inputs. Each extension may provide instructions and source files, for example ad-hoc user notes.
+- extensions/imported/
+  - Staged consolidated artifacts from imported memory bundles. Merge per its
+    instructions.md; the host clears staged files after each run.
 ============================================================
 GLOBAL SAFETY, HYGIENE, AND NO-FILLER RULES (STRICT)
 ============================================================

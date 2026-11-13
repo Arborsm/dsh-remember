@@ -6,6 +6,7 @@ import { gunzipSync, gzipSync } from 'node:zlib'
 import type { ToolRuntime } from './dsh-types.ts'
 import type { MemoryDatabase, MemoryRecord } from './db.ts'
 import type { MemoryPaths } from './paths.ts'
+import { IMPORTED_DIR_REL } from './paths.ts'
 import { recordContentHash } from './db.ts'
 import { classifyWorkspaceFile, readTextFileOrNull, writeTextFileIfChanged, ensureGitRepo, commitBaseline } from './workspace.ts'
 
@@ -99,6 +100,7 @@ export interface ImportOutcome {
   targetWins: number
   filesImported: number
   filesRemapped: number
+  filesStaged: number
 }
 
 /**
@@ -108,7 +110,7 @@ export interface ImportOutcome {
  */
 export async function importBundle(bundlePath: string, db: MemoryDatabase, paths: MemoryPaths): Promise<ImportOutcome> {
   const bundle = readBundle(bundlePath)
-  const outcome: ImportOutcome = { imported: 0, duplicate: 0, targetWins: 0, filesImported: 0, filesRemapped: 0 }
+  const outcome: ImportOutcome = { imported: 0, duplicate: 0, targetWins: 0, filesImported: 0, filesRemapped: 0, filesStaged: 0 }
 
   const existing = db.listStage1()
   const existingById = new Map(existing.map((record) => [record.sessionId, record]))
@@ -159,6 +161,20 @@ export async function importBundle(bundlePath: string, db: MemoryDatabase, paths
         }
         relative = candidate
         outcome.filesRemapped += 1
+      } else if (
+        (kind === 'index' || kind === 'summary')
+        && existingText.trim() !== file.text.trim()
+      ) {
+        // Foreign consolidated artifacts never overwrite local memory: stage
+        // them for the next consolidator run, which merges them via the LLM.
+        const stagedRel = `${IMPORTED_DIR_REL}/${relative}`
+        const stagedTarget = path.join(paths.workspaceRoot, stagedRel)
+        if (readTextFileOrNull(stagedTarget)?.trim() !== file.text.trim()) {
+          writeTextFileIfChanged(stagedTarget, file.text)
+          outcome.filesStaged += 1
+        }
+        occupiedPaths.add(stagedRel)
+        continue
       } else {
         outcome.duplicate += 1
         continue
@@ -179,7 +195,7 @@ export async function importBundle(bundlePath: string, db: MemoryDatabase, paths
 
 // ── model tools ─────────────────────────────────────────────────────────────
 
-export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, paths: MemoryPaths): void {
+export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, paths: MemoryPaths, onImported?: () => void): void {
   // Parameters are plain JSON Schema: the host forwards them to the model
   // verbatim, so the root must be `type: 'object'` (a bare property map is
   // rejected by providers as `type: null`).
@@ -226,12 +242,14 @@ export function registerTransferTools(tools: ToolRuntime, db: MemoryDatabase, pa
     },
     async execute(args: { srcPath: string }) {
       const outcome = await importBundle(path.resolve(args.srcPath), db, paths)
+      if (outcome.imported > 0 || outcome.filesStaged > 0) onImported?.()
       return [
         `imported records: ${outcome.imported}`,
         `duplicates skipped: ${outcome.duplicate}`,
         `target-wins conflicts: ${outcome.targetWins}`,
         `files imported: ${outcome.filesImported}`,
         `notes remapped: ${outcome.filesRemapped}`,
+        `memory files staged for consolidator merge: ${outcome.filesStaged}`,
       ].join('; ')
     },
   })

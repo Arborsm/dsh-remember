@@ -7,6 +7,7 @@ export const RAW_MEMORIES_FILE_NAME = 'raw_memories.md'
 export const PHASE2_DIFF_FILE_NAME = 'phase2_workspace_diff.md'
 export const ROLLOUT_SUMMARIES_DIR_NAME = 'rollout_summaries'
 export const AD_HOC_NOTES_DIR_REL = 'extensions/ad_hoc/notes'
+export const IMPORTED_DIR_REL = 'extensions/imported'
 export const SKILLS_DIR_NAME = 'skills'
 
 /** Resolved filesystem locations for one plugin instance. */

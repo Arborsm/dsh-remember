@@ -34,6 +34,8 @@ export interface MemoryConfigPayload {
 export interface MemoryViewPayload {
   blobs: string
   records: string
+  activity: string
+  pipeline: string
   translatedStale: boolean
   translating: boolean
   updatedAt: number

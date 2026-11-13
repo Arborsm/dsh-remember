@@ -49,7 +49,7 @@ export interface MemoryServiceOptions {
   config: MemoryPluginConfig
   state: MemoryState
   /** Scheduler trigger, injected by the plugin so the service owns no timer. */
-  requestCycle: () => void
+  requestCycle: (force?: boolean) => void
 }
 
 /** The Host surface exposed as `remote.memory`. */
@@ -98,7 +98,7 @@ async function runCommand(
   const status = state.writeStatus
   switch (action) {
     case 'run-cycle':
-      options.requestCycle()
+      options.requestCycle(true)
       return { ok: true, detail: 'scheduler: memory cycle requested' }
     case 'toggle-schedule': {
       const next = state.update({ generateMemories: config.generateMemories !== true })
@@ -109,12 +109,12 @@ async function runCommand(
       exec(`explorer "${paths.workspaceRoot}"`, () => {})
       return { ok: true, detail: `opened ${paths.workspaceRoot}` }
     case 'refresh-view':
-      publishMemoryView(db, paths, state.writeView)
+      publishMemoryView(db, paths, config, state.writeView)
       return { ok: true, detail: 'view refreshed', view: state.viewSnapshot() }
     case 'export':
       return exportMemory(db, paths, argPath, status)
     case 'import':
-      return importMemory(db, paths, argPath, payload, status)
+      return importMemory(db, paths, argPath, payload, status, () => options.requestCycle(true))
     case 'translate-memory':
       void runTranslate(arg || 'zh', request?.force === true, ctx, db, paths, config, state.writeView, status)
       return { ok: true, detail: `translate: ${request?.force === true ? 'rebuilding' : 'starting'}…` }
@@ -169,6 +169,7 @@ async function importMemory(
   rawPath: string,
   payload: string,
   status: StatusWriter,
+  onImported: () => void,
 ): Promise<MemoryCommandResult> {
   const trimmed = rawPath.trim()
   let srcPath = trimmed
@@ -184,9 +185,13 @@ async function importMemory(
       fs.writeFileSync(srcPath, Buffer.from(payload, 'base64'))
     }
     const outcome = await importBundle(path.resolve(srcPath), db, paths)
-    console.info(`[dsh-memory] imported ${outcome.imported} records (${outcome.duplicate} duplicates) from ${srcPath}`)
+    console.info(`[dsh-memory] imported ${outcome.imported} records (${outcome.duplicate} duplicates, ${outcome.filesStaged} staged) from ${srcPath}`)
+    // Staged imports and fresh records merge in the next consolidator run;
+    // kick the scheduler so it happens promptly.
+    if (outcome.imported > 0 || outcome.filesStaged > 0) onImported()
     const detail = `transfer: imported ${outcome.imported} records, ${outcome.filesImported} files`
-      + ` (${outcome.duplicate} duplicates skipped, ${outcome.targetWins} conflicts kept local)`
+      + ` (${outcome.duplicate} duplicates skipped, ${outcome.targetWins} conflicts kept local`
+      + `${outcome.filesStaged > 0 ? `, ${outcome.filesStaged} memory file(s) staged for merge` : ''})`
     status('idle', detail)
     return { ok: true, detail }
   } catch (error) {
@@ -231,7 +236,7 @@ async function runTranslate(
   } finally {
     view({ translating: false })
     try {
-      publishMemoryView(db, paths, view)
+      publishMemoryView(db, paths, config, view)
     } catch {
       // publish failure is non-fatal; the status line already carried the result
     }

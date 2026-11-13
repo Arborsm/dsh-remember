@@ -83,6 +83,8 @@ const viewCodec = codec('MemoryView', (value) => {
   return {
     blobs: typeof record.blobs === 'string' ? record.blobs : '',
     records: typeof record.records === 'string' ? record.records : '[]',
+    activity: typeof record.activity === 'string' ? record.activity : '[]',
+    pipeline: typeof record.pipeline === 'string' ? record.pipeline : '{}',
     translatedStale: record.translatedStale === true,
     translating: record.translating === true,
     updatedAt: numberOr(record.updatedAt, 0),

@@ -36,6 +36,8 @@ export interface MemoryViewInput {
   translatedStale?: boolean
   translating?: boolean
   records?: string
+  activity?: string
+  pipeline?: string
 }
 
 export type ViewWriter = (view: MemoryViewInput) => void
@@ -43,6 +45,8 @@ export type ViewWriter = (view: MemoryViewInput) => void
 export interface MemoryViewPayload {
   blobs: string
   records: string
+  activity: string
+  pipeline: string
   translatedStale: boolean
   translating: boolean
   updatedAt: number
@@ -115,6 +119,8 @@ export class MemoryState {
   private readonly view: MemoryViewPayload = {
     blobs: '',
     records: '[]',
+    activity: '[]',
+    pipeline: '{}',
     translatedStale: false,
     translating: false,
     updatedAt: 0,
@@ -187,6 +193,8 @@ export class MemoryState {
     }
     if (textsChanged) this.view.blobs = encodeBlobs(this.texts)
     if (input.records !== undefined) this.view.records = input.records
+    if (input.activity !== undefined) this.view.activity = input.activity
+    if (input.pipeline !== undefined) this.view.pipeline = input.pipeline
     if (input.translatedStale !== undefined) this.view.translatedStale = input.translatedStale
     if (input.translating !== undefined) this.view.translating = input.translating
     this.view.updatedAt = Date.now()

@@ -7,6 +7,8 @@ import type { DshContext } from './dsh-types.ts'
 import type { MemoryPaths } from './paths.ts'
 import type { MemoryPluginConfig } from './config.ts'
 import type { ViewWriter } from './state.ts'
+import { IMPORTED_DIR_REL } from './paths.ts'
+import { readConsolidationLog } from './activity.ts'
 import { resolveModelConfig, oneShot, offReasoningEffort } from './llm.ts'
 import { readTextFileOrNull, writeTextFileIfChanged } from './workspace.ts'
 
@@ -123,9 +125,13 @@ export function currentTranslation(root: string): { text: string; stale: boolean
 }
 
 /** Mirror the memory workspace into the viewer namespace. */
-export function publishMemoryView(db: MemoryDatabase, paths: MemoryPaths, write: ViewWriter): void {
+export function publishMemoryView(db: MemoryDatabase, paths: MemoryPaths, config: MemoryPluginConfig, write: ViewWriter): void {
   const root = paths.workspaceRoot
   const translated = currentTranslations(root)
+  const importedDir = path.join(root, IMPORTED_DIR_REL)
+  const staged = fs.existsSync(importedDir)
+    ? fs.readdirSync(importedDir).filter((name) => name.endsWith('.md') && name !== 'instructions.md').length
+    : 0
   write({
     summary: readSource(root, 'memory_summary.md'),
     index: readSource(root, 'MEMORY.md'),
@@ -133,6 +139,12 @@ export function publishMemoryView(db: MemoryDatabase, paths: MemoryPaths, write:
     translatedIndex: translated.index,
     translatedStale: translated.stale,
     records: JSON.stringify(db.listStage1Stats()),
+    activity: JSON.stringify(readConsolidationLog(paths)),
+    pipeline: JSON.stringify({
+      pending: db.listPhase2Candidates(config.maxUnusedDays).length,
+      staged,
+      cooldownUntil: db.phase2CooldownUntil(config.phase2SuccessCooldownSeconds),
+    }),
   })
 }
 

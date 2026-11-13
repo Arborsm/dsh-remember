@@ -46,6 +46,8 @@ export interface MemoryCommandResult {
   view?: {
     blobs: string
     records: string
+    activity: string
+    pipeline: string
     translatedStale: boolean
     translating: boolean
     updatedAt: number

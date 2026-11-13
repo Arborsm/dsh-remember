@@ -17,8 +17,8 @@ export interface SchedulerStats {
 }
 
 export interface SchedulerHandle {
-  /** Run one full memory cycle immediately (widget action). */
-  requestCycle(): void
+  /** Run one full memory cycle immediately (widget action). `force` skips the post-success cooldown — use for explicit user triggers. */
+  requestCycle(force?: boolean): void
 }
 
 /**
@@ -37,7 +37,7 @@ export function startScheduler(
   let running = false
   let idleTimer: NodeJS.Timeout | null = null
 
-  const runCycle = async (trigger: string): Promise<void> => {
+  const runCycle = async (trigger: string, force = false): Promise<void> => {
     if (running) return
     if (!config.enabled || !config.generateMemories) return
     running = true
@@ -69,9 +69,12 @@ export function startScheduler(
       const pending = db.listPhase2Candidates(config.maxUnusedDays).length
       if (!startup || config.runPhase2OnStartup) {
         const cooldown = db.phase2CooldownUntil(config.phase2SuccessCooldownSeconds)
-        if (cooldown == null || cooldown <= Math.floor(Date.now() / 1000)) {
+        if (force || cooldown == null || cooldown <= Math.floor(Date.now() / 1000)) {
           status('phase2', `consolidating ${pending} record(s)`)
-          const phase2 = await runPhase2(ctx, db, paths, config, { ignoreRetryAt: startup })
+          const phase2 = await runPhase2(ctx, db, paths, config, {
+            ignoreRetryAt: startup,
+            onStep: (detail) => status('phase2', `${pending} record(s): ${detail}`),
+          })
           console.info(`[dsh-memory] phase2: ran=${phase2.ran}${phase2.reason ? ` reason=${phase2.reason}` : ''}`)
           if (phase2.ran) {
             phase2Note = `, consolidated ${pending}`
@@ -123,8 +126,8 @@ export function startScheduler(
   })
 
   return {
-    requestCycle: () => {
-      void runCycle('manual')
+    requestCycle: (force?: boolean) => {
+      void runCycle('manual', force === true)
     },
   }
 }
